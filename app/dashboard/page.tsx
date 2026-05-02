@@ -167,6 +167,40 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleRemoveFromWatchlist(itemId: string) {
+    setAddStatusMessage("");
+    setAddErrorMessage("");
+
+    if (!userId) {
+      setAddErrorMessage("Please log in before removing games from your watchlist.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/watchlist?itemId=${itemId}&userId=${userId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Unable to remove game from watchlist");
+      }
+
+      setAddStatusMessage("Game removed from your watchlist.");
+      loadWatchlist(userId);
+    } catch (error) {
+      setAddErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove game from watchlist"
+      );
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
@@ -331,16 +365,25 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {item.games.store_url && (
-                    <a
-                      href={item.games.store_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    {item.games.store_url && (
+                      <a
+                        href={item.games.store_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
+                      >
+                        View on Steam
+                      </a>
+                    )}
+
+                    <button
+                      onClick={() => handleRemoveFromWatchlist(item.id)}
+                      className="rounded-xl border border-red-900 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-950"
                     >
-                      View on Steam
-                    </a>
-                  )}
+                      Remove
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -127,3 +127,45 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const itemId = searchParams.get("itemId");
+    const userId = searchParams.get("userId");
+
+    if (!itemId || !userId) {
+      return NextResponse.json(
+        { error: "Missing watchlist item ID or user ID" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseServer
+      .from("watchlist_items")
+      .delete()
+      .eq("id", itemId)
+      .eq("user_id", userId);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to remove watchlist item",
+      },
+      { status: 500 }
+    );
+  }
+}
