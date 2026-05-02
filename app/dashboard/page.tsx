@@ -7,6 +7,10 @@ import { supabase } from "@/lib/supabaseClient";
 type SteamSearchResult = {
   steamAppId: number;
   name: string;
+  image: string | null;
+  currentPrice: number | null;
+  originalPrice: number | null;
+  currency: string;
 };
 
 type WatchlistItem = {
@@ -145,6 +149,9 @@ export default function DashboardPage() {
           steamAppId: game.steamAppId,
           name: game.name,
           targetPrice: targetPriceValue,
+          currentPrice: game.currentPrice,
+          originalPrice: game.originalPrice,
+          currency: game.currency,
         }),
       });
 
@@ -283,6 +290,12 @@ export default function DashboardPage() {
                   <h3 className="font-semibold">{game.name}</h3>
                   <p className="text-sm text-slate-400">
                     Steam App ID: {game.steamAppId}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Current price:{" "}
+                    {game.currentPrice === null
+                      ? "Unavailable"
+                      : `$${Number(game.currentPrice).toFixed(2)}`}
                   </p>
                 </div>
 

@@ -6,6 +6,9 @@ type AddWatchlistRequest = {
   steamAppId: number;
   name: string;
   targetPrice: number;
+  currentPrice?: number | null;
+  originalPrice?: number | null;
+  currency?: string;
 };
 
 export async function GET(request: Request) {
@@ -82,6 +85,10 @@ export async function POST(request: Request) {
           steam_app_id: body.steamAppId,
           name: body.name,
           store_url: storeUrl,
+          current_price: body.currentPrice ?? null,
+          original_price: body.originalPrice ?? null,
+          currency: body.currency ?? "USD",
+          last_checked_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
         {
