@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { fetchSteamPrice } from "@/lib/steam/fetchSteamPrice";
+import { sendPriceAlertEmail } from "@/lib/email/sendPriceAlertEmail";
 
 type WatchedGameRow = {
   game_id: string;
@@ -116,6 +117,26 @@ export async function GET(request: Request) {
         const isPriceAtOrBelowTarget = priceData.currentPrice <= targetPrice;
 
         if (isPriceAtOrBelowTarget && !rule.alert_triggered) {
+          const { data: userData, error: userError } =
+            await supabaseServer.auth.admin.getUserById(rule.user_id);
+
+          if (userError) {
+            throw new Error(userError.message);
+          }
+
+          const userEmail = userData.user?.email;
+
+          if (!userEmail) {
+            throw new Error("Unable to find user email for alert.");
+          }
+
+          await sendPriceAlertEmail({
+            to: userEmail,
+            gameName: priceData.name,
+            currentPrice: priceData.currentPrice,
+            targetPrice,
+            storeUrl: priceData.storeUrl,
+          });
           const { error: insertAlertError } = await supabaseServer
             .from("alerts_sent")
             .insert({
