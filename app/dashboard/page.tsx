@@ -321,6 +321,14 @@ export default function DashboardPage() {
                         ? "Not checked yet"
                         : `$${Number(item.games.current_price).toFixed(2)}`}
                     </p>
+                    <p className="text-sm text-slate-400">
+                      Alert status:{" "}
+                      {item.alert_triggered
+                        ? "Triggered"
+                        : item.alert_enabled
+                          ? "Watching"
+                          : "Disabled"}
+                    </p>
                   </div>
 
                   {item.games.store_url && (
