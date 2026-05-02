@@ -5,7 +5,9 @@ type AddWatchlistRequest = {
   userId: string;
   steamAppId: number;
   name: string;
-  targetPrice: number;
+  alertType: "target_price" | "target_discount";
+  targetPrice?: number | null;
+  targetDiscountPercent?: number | null;
   currentPrice?: number | null;
   originalPrice?: number | null;
   currency?: string;
@@ -29,6 +31,8 @@ export async function GET(request: Request) {
         `
         id,
         target_price,
+        target_discount_percent,
+        alert_type,
         alert_enabled,
         alert_triggered,
         games (
@@ -69,9 +73,52 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as AddWatchlistRequest;
 
-    if (!body.userId || !body.steamAppId || !body.name || body.targetPrice < 0) {
+    const isValidAlertType =
+      body.alertType === "target_price" || body.alertType === "target_discount";
+
+    const targetPrice =
+      body.targetPrice === null || body.targetPrice === undefined
+        ? null
+        : Number(body.targetPrice);
+
+    const targetDiscountPercent =
+      body.targetDiscountPercent === null || body.targetDiscountPercent === undefined
+        ? null
+        : Number(body.targetDiscountPercent);
+
+    const isValidTargetPrice =
+      targetPrice === null || (!Number.isNaN(targetPrice) && targetPrice >= 0);
+
+    const isValidTargetDiscount =
+      targetDiscountPercent === null ||
+      (!Number.isNaN(targetDiscountPercent) &&
+        targetDiscountPercent >= 0 &&
+        targetDiscountPercent <= 100);
+
+    if (
+      !body.userId ||
+      !body.steamAppId ||
+      !body.name ||
+      !isValidAlertType ||
+      !isValidTargetPrice ||
+      !isValidTargetDiscount
+    ) {
       return NextResponse.json(
-        { error: "Missing required watchlist information" },
+        { error: "Missing or invalid watchlist information" },
+        { status: 400 }
+      );
+    }
+
+    if (body.alertType === "target_price" && targetPrice === null) {
+      return NextResponse.json(
+        { error: "Please enter a valid target price." },
+        { status: 400 }
+      );
+    }
+
+    if (body.alertType === "target_discount" && targetDiscountPercent === null) {
+      return NextResponse.json(
+        { error: "Please enter a valid discount percent from 0 to 100." },
         { status: 400 }
       );
     }
@@ -110,8 +157,9 @@ export async function POST(request: Request) {
       .insert({
         user_id: body.userId,
         game_id: game.id,
-        target_price: body.targetPrice,
-        alert_type: "target_price",
+        target_price: targetPrice,
+        target_discount_percent: targetDiscountPercent,
+        alert_type: body.alertType,
       })
       .select()
       .single();
@@ -183,9 +231,38 @@ export async function PATCH(request: Request) {
 
     const itemId = body.itemId as string | undefined;
     const userId = body.userId as string | undefined;
-    const targetPrice = Number(body.targetPrice);
+    const alertType = body.alertType as string | undefined;
 
-    if (!itemId || !userId || Number.isNaN(targetPrice) || targetPrice < 0) {
+    const targetPrice =
+      body.targetPrice === null || body.targetPrice === undefined
+        ? null
+        : Number(body.targetPrice);
+
+    const targetDiscountPercent =
+      body.targetDiscountPercent === null ||
+      body.targetDiscountPercent === undefined
+        ? null
+        : Number(body.targetDiscountPercent);
+
+    const isValidAlertType =
+      alertType === "target_price" || alertType === "target_discount";
+
+    const isValidTargetPrice =
+      targetPrice === null || (!Number.isNaN(targetPrice) && targetPrice >= 0);
+
+    const isValidTargetDiscount =
+      targetDiscountPercent === null ||
+      (!Number.isNaN(targetDiscountPercent) &&
+        targetDiscountPercent >= 0 &&
+        targetDiscountPercent <= 100);
+
+    if (
+      !itemId ||
+      !userId ||
+      !isValidAlertType ||
+      !isValidTargetPrice ||
+      !isValidTargetDiscount
+    ) {
       return NextResponse.json(
         { error: "Missing or invalid watchlist update information" },
         { status: 400 }
@@ -195,7 +272,9 @@ export async function PATCH(request: Request) {
     const { error } = await supabaseServer
       .from("watchlist_items")
       .update({
+        alert_type: alertType,
         target_price: targetPrice,
+        target_discount_percent: targetDiscountPercent,
         alert_triggered: false,
         updated_at: new Date().toISOString(),
       })

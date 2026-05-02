@@ -15,7 +15,9 @@ type SteamSearchResult = {
 
 type WatchlistItem = {
   id: string;
-  target_price: number;
+  target_price: number | null;
+  target_discount_percent: number | null;
+  alert_type: "target_price" | "target_discount";
   alert_enabled: boolean;
   alert_triggered: boolean;
   games: {
@@ -39,13 +41,22 @@ export default function DashboardPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [addAlertTypes, setAddAlertTypes] = useState<
+    Record<number, "target_price" | "target_discount">
+  >({});
   const [targetPrices, setTargetPrices] = useState<Record<number, string>>({});
+  const [targetDiscounts, setTargetDiscounts] = useState<Record<number, string>>({});
   const [addStatusMessage, setAddStatusMessage] = useState("");
   const [addErrorMessage, setAddErrorMessage] = useState("");
   const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([]);
   const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(false);
   const [watchlistError, setWatchlistError] = useState("");
+  const [editAlertTypes, setEditAlertTypes] = useState<
+    Record<string, "target_price" | "target_discount">
+  >({});
+
   const [editTargetPrices, setEditTargetPrices] = useState<Record<string, string>>({});
+  const [editTargetDiscounts, setEditTargetDiscounts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function getSession() {
@@ -132,10 +143,38 @@ export default function DashboardPage() {
       return;
     }
 
-    const targetPriceValue = Number(targetPrices[game.steamAppId]);
+    const selectedAlertType = addAlertTypes[game.steamAppId] ?? "target_price";
 
-    if (Number.isNaN(targetPriceValue) || targetPriceValue < 0) {
+    const targetPriceValue =
+      targetPrices[game.steamAppId] === undefined ||
+      targetPrices[game.steamAppId] === ""
+        ? null
+        : Number(targetPrices[game.steamAppId]);
+
+    const targetDiscountValue =
+      targetDiscounts[game.steamAppId] === undefined ||
+      targetDiscounts[game.steamAppId] === ""
+        ? null
+        : Number(targetDiscounts[game.steamAppId]);
+
+    if (
+      selectedAlertType === "target_price" &&
+      (targetPriceValue === null ||
+        Number.isNaN(targetPriceValue) ||
+        targetPriceValue < 0)
+    ) {
       setAddErrorMessage("Please enter a valid target price.");
+      return;
+    }
+
+    if (
+      selectedAlertType === "target_discount" &&
+      (targetDiscountValue === null ||
+        Number.isNaN(targetDiscountValue) ||
+        targetDiscountValue < 0 ||
+        targetDiscountValue > 100)
+    ) {
+      setAddErrorMessage("Please enter a valid discount percent from 0 to 100.");
       return;
     }
 
@@ -149,7 +188,9 @@ export default function DashboardPage() {
           userId,
           steamAppId: game.steamAppId,
           name: game.name,
+          alertType: selectedAlertType,
           targetPrice: targetPriceValue,
+          targetDiscountPercent: targetDiscountValue,
           currentPrice: game.currentPrice,
           originalPrice: game.originalPrice,
           currency: game.currency,
@@ -165,6 +206,11 @@ export default function DashboardPage() {
       setAddStatusMessage(`${game.name} was added to your watchlist.`);
       loadWatchlist(userId);
       setTargetPrices((current) => ({
+        ...current,
+        [game.steamAppId]: "",
+      }));
+
+      setTargetDiscounts((current) => ({
         ...current,
         [game.steamAppId]: "",
       }));
@@ -209,7 +255,7 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleUpdateTargetPrice(itemId: string) {
+  async function handleUpdateAlertRule(item: WatchlistItem) {
     setAddStatusMessage("");
     setAddErrorMessage("");
 
@@ -218,10 +264,36 @@ export default function DashboardPage() {
       return;
     }
 
-    const targetPriceValue = Number(editTargetPrices[itemId]);
+    const selectedAlertType = editAlertTypes[item.id] ?? item.alert_type;
 
-    if (Number.isNaN(targetPriceValue) || targetPriceValue < 0) {
+    const targetPriceValue =
+      editTargetPrices[item.id] === undefined || editTargetPrices[item.id] === ""
+        ? item.target_price
+        : Number(editTargetPrices[item.id]);
+
+    const targetDiscountValue =
+      editTargetDiscounts[item.id] === undefined || editTargetDiscounts[item.id] === ""
+        ? item.target_discount_percent
+        : Number(editTargetDiscounts[item.id]);
+
+    if (
+      selectedAlertType === "target_price" &&
+      (targetPriceValue === null ||
+        Number.isNaN(targetPriceValue) ||
+        targetPriceValue < 0)
+    ) {
       setAddErrorMessage("Please enter a valid target price.");
+      return;
+    }
+
+    if (
+      selectedAlertType === "target_discount" &&
+      (targetDiscountValue === null ||
+        Number.isNaN(targetDiscountValue) ||
+        targetDiscountValue < 0 ||
+        targetDiscountValue > 100)
+    ) {
+      setAddErrorMessage("Please enter a valid discount percent from 0 to 100.");
       return;
     }
 
@@ -232,23 +304,25 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          itemId,
+          itemId: item.id,
           userId,
+          alertType: selectedAlertType,
           targetPrice: targetPriceValue,
+          targetDiscountPercent: targetDiscountValue,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Unable to update target price");
+        throw new Error(data.error ?? "Unable to update alert rule");
       }
 
-      setAddStatusMessage("Target price updated.");
+      setAddStatusMessage("Alert rule updated.");
       loadWatchlist(userId);
     } catch (error) {
       setAddErrorMessage(
-        error instanceof Error ? error.message : "Unable to update target price"
+        error instanceof Error ? error.message : "Unable to update alert rule"
       );
     }
   }
@@ -313,18 +387,6 @@ export default function DashboardPage() {
             </p>
           )}
 
-          {addStatusMessage && (
-            <p className="mt-4 rounded-xl border border-green-800 bg-green-950/50 p-3 text-sm text-green-200">
-              {addStatusMessage}
-            </p>
-          )}
-
-          {addErrorMessage && (
-            <p className="mt-4 rounded-xl border border-red-800 bg-red-950/50 p-3 text-sm text-red-200">
-              {addErrorMessage}
-            </p>
-          )}
-
           <div className="mt-5 space-y-3">
             {searchResults.map((game) => (
               <div
@@ -344,21 +406,55 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={targetPrices[game.steamAppId] ?? ""}
+                <div className="grid gap-2 sm:grid-cols-[170px_150px_auto] sm:items-center">
+                  <select
+                    value={addAlertTypes[game.steamAppId] ?? "target_price"}
                     onChange={(event) =>
-                      setTargetPrices((current) => ({
+                      setAddAlertTypes((current) => ({
                         ...current,
-                        [game.steamAppId]: event.target.value,
+                        [game.steamAppId]: event.target.value as
+                          | "target_price"
+                          | "target_discount",
                       }))
                     }
-                    placeholder="Target price"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400 sm:w-32"
-                  />
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                  >
+                    <option value="target_price">Target price</option>
+                    <option value="target_discount">Discount percent</option>
+                  </select>
+
+                  {(addAlertTypes[game.steamAppId] ?? "target_price") === "target_price" ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={targetPrices[game.steamAppId] ?? ""}
+                      onChange={(event) =>
+                        setTargetPrices((current) => ({
+                          ...current,
+                          [game.steamAppId]: event.target.value,
+                        }))
+                      }
+                      placeholder="Price"
+                      className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400"
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={targetDiscounts[game.steamAppId] ?? ""}
+                      onChange={(event) =>
+                        setTargetDiscounts((current) => ({
+                          ...current,
+                          [game.steamAppId]: event.target.value,
+                        }))
+                      }
+                      placeholder="Discount %"
+                      className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400"
+                    />
+                  )}
 
                   <button
                     onClick={() => handleAddToWatchlist(game)}
@@ -380,6 +476,18 @@ export default function DashboardPage() {
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h2 className="text-xl font-semibold">Watchlist</h2>
+            
+          {addStatusMessage && (
+            <p className="mt-4 rounded-xl border border-green-800 bg-green-950/50 p-3 text-sm text-green-200">
+              {addStatusMessage}
+            </p>
+          )}
+
+          {addErrorMessage && (
+            <p className="mt-4 rounded-xl border border-red-800 bg-red-950/50 p-3 text-sm text-red-200">
+              {addErrorMessage}
+            </p>
+          )}
 
           {isLoadingWatchlist && (
             <p className="mt-2 text-slate-400">Loading watchlist...</p>
@@ -404,32 +512,87 @@ export default function DashboardPage() {
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
                     <h3 className="font-semibold">{item.games.name}</h3>
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <p className="text-sm text-slate-400">
-                        Target price: ${Number(item.target_price).toFixed(2)}
-                      </p>
+                    <div className="mt-2 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-sm text-slate-400">
+                          Alert type:{" "}
+                          {item.alert_type === "target_price"
+                            ? "Target price"
+                            : "Discount percent"}
+                        </p>
 
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editTargetPrices[item.id] ?? ""}
-                        onChange={(event) =>
-                          setEditTargetPrices((current) => ({
-                            ...current,
-                            [item.id]: event.target.value,
-                          }))
-                        }
-                        placeholder="New target"
-                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400 sm:w-32"
-                      />
+                        {item.alert_type === "target_price" ? (
+                          <p className="text-sm text-slate-400">
+                            Target price:{" "}
+                            {item.target_price === null
+                              ? "Not set"
+                              : `$${Number(item.target_price).toFixed(2)}`}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-slate-400">
+                            Target discount:{" "}
+                            {item.target_discount_percent === null
+                              ? "Not set"
+                              : `${item.target_discount_percent}%`}
+                          </p>
+                        )}
+                      </div>
 
-                      <button
-                        onClick={() => handleUpdateTargetPrice(item.id)}
-                        className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-900"
-                      >
-                        Update
-                      </button>
+                      <div className="grid gap-2 sm:grid-cols-[180px_160px_auto] sm:items-center">
+                        <select
+                          value={editAlertTypes[item.id] ?? item.alert_type}
+                          onChange={(event) =>
+                            setEditAlertTypes((current) => ({
+                              ...current,
+                              [item.id]: event.target.value as "target_price" | "target_discount",
+                            }))
+                          }
+                          className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                        >
+                          <option value="target_price">Target price</option>
+                          <option value="target_discount">Discount percent</option>
+                        </select>
+
+                        {(editAlertTypes[item.id] ?? item.alert_type) === "target_price" ? (
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editTargetPrices[item.id] ?? ""}
+                            onChange={(event) =>
+                              setEditTargetPrices((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Price"
+                            className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400"
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={editTargetDiscounts[item.id] ?? ""}
+                            onChange={(event) =>
+                              setEditTargetDiscounts((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Discount %"
+                            className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400"
+                          />
+                        )}
+
+                        <button
+                          onClick={() => handleUpdateAlertRule(item)}
+                          className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-900"
+                        >
+                          Update
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-slate-400">
                       Current price:{" "}

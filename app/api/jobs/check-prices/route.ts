@@ -100,7 +100,9 @@ export async function GET(request: Request) {
       const { data: watchlistRules, error: watchlistRulesError } =
         await supabaseServer
           .from("watchlist_items")
-          .select("id, user_id, target_price, alert_triggered")
+          .select(
+            "id, user_id, target_price, target_discount_percent, alert_type, alert_triggered"
+          )
           .eq("game_id", game.id)
           .eq("alert_enabled", true);
 
@@ -114,9 +116,19 @@ export async function GET(request: Request) {
         }
 
         const targetPrice = Number(rule.target_price);
-        const isPriceAtOrBelowTarget = priceData.currentPrice <= targetPrice;
+        const targetDiscountPercent = Number(rule.target_discount_percent);
 
-        if (isPriceAtOrBelowTarget && !rule.alert_triggered) {
+        const isPriceAlertMet =
+          rule.alert_type === "target_price" &&
+          priceData.currentPrice <= targetPrice;
+
+        const isDiscountAlertMet =
+          rule.alert_type === "target_discount" &&
+          priceData.discountPercent >= targetDiscountPercent;
+
+        const isAlertMet = isPriceAlertMet || isDiscountAlertMet;
+
+        if (isAlertMet && !rule.alert_triggered) {
           const { data: userData, error: userError } =
             await supabaseServer.auth.admin.getUserById(rule.user_id);
 
@@ -134,7 +146,10 @@ export async function GET(request: Request) {
             to: userEmail,
             gameName: priceData.name,
             currentPrice: priceData.currentPrice,
-            targetPrice,
+            targetPrice:
+              rule.alert_type === "target_price"
+                ? targetPrice
+                : priceData.currentPrice,
             storeUrl: priceData.storeUrl,
           });
           const { error: insertAlertError } = await supabaseServer
@@ -168,7 +183,7 @@ export async function GET(request: Request) {
           triggeredAlertCount += 1;
         }
 
-        if (!isPriceAtOrBelowTarget && rule.alert_triggered) {
+        if (!isAlertMet && rule.alert_triggered) {
           const { error: resetAlertError } = await supabaseServer
             .from("watchlist_items")
             .update({
