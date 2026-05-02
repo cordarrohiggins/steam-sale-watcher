@@ -176,3 +176,51 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+
+    const itemId = body.itemId as string | undefined;
+    const userId = body.userId as string | undefined;
+    const targetPrice = Number(body.targetPrice);
+
+    if (!itemId || !userId || Number.isNaN(targetPrice) || targetPrice < 0) {
+      return NextResponse.json(
+        { error: "Missing or invalid watchlist update information" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseServer
+      .from("watchlist_items")
+      .update({
+        target_price: targetPrice,
+        alert_triggered: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", itemId)
+      .eq("user_id", userId);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to update watchlist item",
+      },
+      { status: 500 }
+    );
+  }
+}

@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([]);
   const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(false);
   const [watchlistError, setWatchlistError] = useState("");
+  const [editTargetPrices, setEditTargetPrices] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function getSession() {
@@ -208,6 +209,50 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleUpdateTargetPrice(itemId: string) {
+    setAddStatusMessage("");
+    setAddErrorMessage("");
+
+    if (!userId) {
+      setAddErrorMessage("Please log in before updating your watchlist.");
+      return;
+    }
+
+    const targetPriceValue = Number(editTargetPrices[itemId]);
+
+    if (Number.isNaN(targetPriceValue) || targetPriceValue < 0) {
+      setAddErrorMessage("Please enter a valid target price.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/watchlist", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          itemId,
+          userId,
+          targetPrice: targetPriceValue,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Unable to update target price");
+      }
+
+      setAddStatusMessage("Target price updated.");
+      loadWatchlist(userId);
+    } catch (error) {
+      setAddErrorMessage(
+        error instanceof Error ? error.message : "Unable to update target price"
+      );
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
@@ -359,9 +404,33 @@ export default function DashboardPage() {
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
                     <h3 className="font-semibold">{item.games.name}</h3>
-                    <p className="text-sm text-slate-400">
-                      Target price: ${Number(item.target_price).toFixed(2)}
-                    </p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <p className="text-sm text-slate-400">
+                        Target price: ${Number(item.target_price).toFixed(2)}
+                      </p>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editTargetPrices[item.id] ?? ""}
+                        onChange={(event) =>
+                          setEditTargetPrices((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="New target"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-slate-400 sm:w-32"
+                      />
+
+                      <button
+                        onClick={() => handleUpdateTargetPrice(item.id)}
+                        className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-900"
+                      >
+                        Update
+                      </button>
+                    </div>
                     <p className="text-sm text-slate-400">
                       Current price:{" "}
                       {item.games.current_price === null
