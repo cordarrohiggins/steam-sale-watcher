@@ -1,0 +1,16 @@
+name: Check Steam Prices
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call price checker endpoint
+        run: |
+          curl -X GET "${{ secrets.APP_URL }}/api/jobs/check-prices" \
+            -H "Authorization: Bearer ${{ secrets.CHECK_PRICES_SECRET }}"
