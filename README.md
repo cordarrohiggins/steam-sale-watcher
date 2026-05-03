@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Steam Sale Watcher
 
-## Getting Started
+Steam Sale Watcher is a full-stack web app that lets users search for Steam games, add games to a personal watchlist, set custom sale alerts, and receive email notifications when a game meets their alert rule.
 
-First, run the development server:
+## Live Demo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Vercel URL:  
+https://steam-sale-watcher.vercel.app/
+
+## Features
+
+- Email magic-link authentication with Supabase
+- Real Steam game search
+- Personal game watchlist
+- Target price alerts
+- Discount percent alerts
+- Real Steam price checking
+- Email notifications with Resend
+- Duplicate alert prevention
+- Scheduled price checks every 2 hours with GitHub Actions
+- Add, update, and remove watched games
+- Responsive website-only design
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Supabase Auth
+- Supabase Postgres
+- Resend
+- GitHub Actions
+- Vercel
+
+## How It Works
+
+1. A user logs in with a magic email link.
+2. The user searches for a Steam game.
+3. The user adds a game to their watchlist.
+4. The user chooses either a target price alert or a discount percent alert.
+5. A GitHub Actions workflow runs every 2 hours.
+6. The workflow calls a protected Next.js API route.
+7. The app fetches current Steam price data.
+8. The app compares each watched game against the user’s alert rule.
+9. If the rule is met, the app sends an email alert.
+10. The app marks the alert as triggered so users do not receive duplicate emails every 2 hours.
+
+## Environment Variables
+
+Create a `.env.local` file for local development:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+CHECK_PRICES_SECRET=
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+These same variables are also required in Vercel.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## GitHub Actions Secrets
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The scheduled checker uses these repository secrets:
 
-## Learn More
+```env
+APP_URL=
+CHECK_PRICES_SECRET=
+```
 
-To learn more about Next.js, take a look at the following resources:
+`APP_URL` should be the deployed Vercel URL without a trailing API route.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+https://steam-sale-watcher.vercel.app
+```
 
-## Deploy on Vercel
+## Current Limitations
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- The app checks watched games only, not every Steam game.
+- Alerts are not instant. They run on the scheduled checker, currently every 2 hours.
+- The first version assumes US/USD Steam pricing.
+- Steam store data is fetched server-side and may not behave exactly like a fully official API.
+- Email alerts use Resend. Free-tier sending limits apply.
+- Global alerts, such as “any game becomes free,” are planned as a future upgrade.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Future Improvements
+
+- Global free-game alerts
+- Global “under $5” deal alerts
+- Price history chart
+- Better filtering for DLC, demos, soundtracks, and non-game apps
+- Steam wishlist import
+- Browser push notifications
+- Public deals page
+- User notification preferences
+
+## Resume Summary
+
+Built a full-stack Steam price tracking app with authenticated watchlists, real Steam price fetching, scheduled background checks, duplicate-alert prevention, and automated email alerts for user-defined sale thresholds.
