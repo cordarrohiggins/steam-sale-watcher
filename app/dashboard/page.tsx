@@ -558,16 +558,34 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold">Watchlist</h2>
             
           {addStatusMessage && (
-            <p className="mt-4 rounded-xl border border-green-800 bg-green-950/50 p-3 text-sm text-green-200">
-              {addStatusMessage}
-            </p>
-          )}
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-green-800 bg-green-950/50 p-3 text-sm text-green-200">
+            <p>{addStatusMessage}</p>
 
-          {addErrorMessage && (
-            <p className="mt-4 rounded-xl border border-red-800 bg-red-950/50 p-3 text-sm text-red-200">
-              {addErrorMessage}
-            </p>
-          )}
+            <button
+              type="button"
+              onClick={() => setAddStatusMessage("")}
+              className="rounded-lg px-2 py-1 text-green-200 transition hover:bg-green-900/60"
+              aria-label="Dismiss success message"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {addErrorMessage && (
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-red-800 bg-red-950/50 p-3 text-sm text-red-200">
+            <p>{addErrorMessage}</p>
+
+            <button
+              type="button"
+              onClick={() => setAddErrorMessage("")}
+              className="rounded-lg px-2 py-1 text-red-200 transition hover:bg-red-900/60"
+              aria-label="Dismiss error message"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
           {isLoadingWatchlist && (
             <p className="mt-2 text-slate-400">Loading watchlist...</p>
@@ -587,11 +605,23 @@ export default function DashboardPage() {
             {watchlistItems.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                className={`rounded-xl border p-4 ${
+                  item.alert_triggered
+                    ? "border-green-700 bg-green-950/20 shadow-lg shadow-green-950/30"
+                    : "border-slate-800 bg-slate-950"
+                }`}
               >
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
-                    <h3 className="font-semibold">{item.games.name}</h3>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="font-semibold">{item.games.name}</h3>
+
+                      {item.alert_triggered && (
+                        <span className="rounded-full border border-green-700 bg-green-950 px-3 py-1 text-xs font-semibold text-green-200">
+                          Deal Alert Triggered
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-2 space-y-3">
                       <div className="space-y-1">
                         <p className="text-sm text-slate-400">

@@ -13,6 +13,38 @@ type AddWatchlistRequest = {
   currency?: string;
 };
 
+function isAlertCurrentlyMet({
+  alertType,
+  targetPrice,
+  targetDiscountPercent,
+  currentPrice,
+  discountPercent,
+}: {
+  alertType: "target_price" | "target_discount";
+  targetPrice: number | null;
+  targetDiscountPercent: number | null;
+  currentPrice: number | null;
+  discountPercent: number | null;
+}) {
+  if (alertType === "target_price") {
+    return (
+      currentPrice !== null &&
+      targetPrice !== null &&
+      currentPrice <= targetPrice
+    );
+  }
+
+  if (alertType === "target_discount") {
+    return (
+      discountPercent !== null &&
+      targetDiscountPercent !== null &&
+      discountPercent >= targetDiscountPercent
+    );
+  }
+
+  return false;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -154,6 +186,23 @@ export async function POST(request: Request) {
       );
     }
 
+    const alertTriggered = isAlertCurrentlyMet({
+      alertType: body.alertType,
+      targetPrice,
+      targetDiscountPercent,
+      currentPrice: body.currentPrice ?? null,
+      discountPercent:
+        body.currentPrice !== null &&
+        body.currentPrice !== undefined &&
+        body.originalPrice !== null &&
+        body.originalPrice !== undefined &&
+        body.originalPrice > 0
+          ? Math.round(
+              ((body.originalPrice - body.currentPrice) / body.originalPrice) * 100
+            )
+          : null,
+    });
+
     const { data: watchlistItem, error: watchlistError } = await supabaseServer
       .from("watchlist_items")
       .insert({
@@ -162,6 +211,8 @@ export async function POST(request: Request) {
         target_price: targetPrice,
         target_discount_percent: targetDiscountPercent,
         alert_type: body.alertType,
+        alert_triggered: alertTriggered,
+        last_alert_sent_at: null,
       })
       .select()
       .single();
@@ -271,13 +322,47 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const { data: existingItem, error: existingItemError } = await supabaseServer
+      .from("watchlist_items")
+      .select(
+        `
+        id,
+        games (
+          current_price,
+          discount_percent
+        )
+      `
+      )
+      .eq("id", itemId)
+      .eq("user_id", userId)
+      .single();
+
+    if (existingItemError) {
+      return NextResponse.json(
+        { error: existingItemError.message },
+        { status: 500 }
+      );
+    }
+
+    const gameData = Array.isArray(existingItem.games)
+      ? existingItem.games[0]
+      : existingItem.games;
+
+    const alertTriggered = isAlertCurrentlyMet({
+      alertType,
+      targetPrice,
+      targetDiscountPercent,
+      currentPrice: gameData?.current_price ?? null,
+      discountPercent: gameData?.discount_percent ?? null,
+    });
+
     const { error } = await supabaseServer
       .from("watchlist_items")
       .update({
         alert_type: alertType,
         target_price: targetPrice,
         target_discount_percent: targetDiscountPercent,
-        alert_triggered: false,
+        alert_triggered: alertTriggered,
         updated_at: new Date().toISOString(),
       })
       .eq("id", itemId)
