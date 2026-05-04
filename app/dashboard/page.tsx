@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 type SteamSearchResult = {
   steamAppId: number;
@@ -40,6 +41,10 @@ export default function DashboardPage() {
   const [searchResults, setSearchResults] = useState<SteamSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [hideDlc, setHideDlc] = useState(true);
+  const [hideSoundtracks, setHideSoundtracks] = useState(true);
+  const [hideDemos, setHideDemos] = useState(true);
+  const [hideExtras, setHideExtras] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [addAlertTypes, setAddAlertTypes] = useState<
     Record<number, "target_price" | "target_discount">
@@ -100,12 +105,10 @@ export default function DashboardPage() {
     setUserEmail(null);
   }
 
-  async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const searchSteamGames = useCallback(async function searchSteamGames(query: string) {
+    const trimmedQuery = query.trim();
 
-    const trimmedQuery = searchQuery.trim();
-
-    if (!trimmedQuery) {
+    if (!trimmedQuery || trimmedQuery.length < 2) {
       setSearchResults([]);
       return;
     }
@@ -115,7 +118,9 @@ export default function DashboardPage() {
 
     try {
       const response = await fetch(
-        `/api/steam/search?q=${encodeURIComponent(trimmedQuery)}`
+        `/api/steam/search?q=${encodeURIComponent(
+          trimmedQuery
+        )}&hideDlc=${hideDlc}&hideSoundtracks=${hideSoundtracks}&hideDemos=${hideDemos}&hideExtras=${hideExtras}`
       );
 
       const data = await response.json();
@@ -132,6 +137,19 @@ export default function DashboardPage() {
     } finally {
       setIsSearching(false);
     }
+  }, [hideDlc, hideSoundtracks, hideDemos, hideExtras]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      searchSteamGames(searchQuery);
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery, searchSteamGames]);
+
+  async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    searchSteamGames(searchQuery);
   }
 
   async function handleAddToWatchlist(game: SteamSearchResult) {
@@ -381,6 +399,48 @@ export default function DashboardPage() {
             </button>
           </form>
 
+          <div className="mt-4 grid gap-3 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={hideDlc}
+                onChange={(event) => setHideDlc(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Hide DLC
+            </label>
+
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={hideSoundtracks}
+                onChange={(event) => setHideSoundtracks(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Hide soundtracks
+            </label>
+
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={hideDemos}
+                onChange={(event) => setHideDemos(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Hide demos
+            </label>
+
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={hideExtras}
+                onChange={(event) => setHideExtras(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Hide extras
+            </label>
+          </div>
+
           {searchError && (
             <p className="mt-4 rounded-xl border border-red-800 bg-red-950/50 p-3 text-sm text-red-200">
               {searchError}
@@ -393,17 +453,29 @@ export default function DashboardPage() {
                 key={game.steamAppId}
                 className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4"
               >
-                <div>
-                  <h3 className="font-semibold">{game.name}</h3>
-                  <p className="text-sm text-slate-400">
-                    Steam App ID: {game.steamAppId}
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Current price:{" "}
-                    {game.currentPrice === null
-                      ? "Unavailable"
-                      : `$${Number(game.currentPrice).toFixed(2)}`}
-                  </p>
+                <div className="flex items-center gap-4">
+                  {game.image && (
+                    <Image
+                      src={game.image}
+                      alt={`${game.name} header image`}
+                      width={184}
+                      height={69}
+                      className="h-16 w-36 rounded-lg object-cover"
+                    />
+                  )}
+
+                  <div>
+                    <h3 className="font-semibold">{game.name}</h3>
+                    <p className="text-sm text-slate-400">
+                      Steam App ID: {game.steamAppId}
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      Current price:{" "}
+                      {game.currentPrice === null
+                        ? "Unavailable"
+                        : `$${Number(game.currentPrice).toFixed(2)}`}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-[170px_150px_auto] sm:items-center">
