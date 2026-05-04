@@ -328,6 +328,7 @@ export async function PATCH(request: Request) {
         `
         id,
         games (
+          id,
           current_price,
           discount_percent
         )
@@ -373,6 +374,64 @@ export async function PATCH(request: Request) {
         { error: error.message },
         { status: 500 }
       );
+    }
+
+    if (alertTriggered) {
+      const { data: userSettings, error: userSettingsError } = await supabaseServer
+        .from("user_settings")
+        .select("email_alert_frequency")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (userSettingsError) {
+        return NextResponse.json(
+          { error: userSettingsError.message },
+          { status: 500 }
+        );
+      }
+
+      const emailAlertFrequency =
+        userSettings?.email_alert_frequency ?? "immediate";
+
+      if (emailAlertFrequency === "daily_digest") {
+        const { data: existingDigestAlert, error: existingDigestAlertError } =
+          await supabaseServer
+            .from("alerts_sent")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("watchlist_item_id", itemId)
+            .eq("email_delivery_type", "daily_digest")
+            .is("digest_email_sent_at", null)
+            .maybeSingle();
+
+        if (existingDigestAlertError) {
+          return NextResponse.json(
+            { error: existingDigestAlertError.message },
+            { status: 500 }
+          );
+        }
+
+        if (!existingDigestAlert) {
+          const { error: insertDigestAlertError } = await supabaseServer
+            .from("alerts_sent")
+            .insert({
+              user_id: userId,
+              game_id: gameData.id,
+              watchlist_item_id: itemId,
+              price_at_alert: gameData.current_price,
+              discount_at_alert: gameData.discount_percent,
+              alert_type: alertType,
+              email_delivery_type: "daily_digest",
+            });
+
+          if (insertDigestAlertError) {
+            return NextResponse.json(
+              { error: insertDigestAlertError.message },
+              { status: 500 }
+            );
+          }
+        }
+      }
     }
 
     return NextResponse.json({
