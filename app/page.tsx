@@ -39,6 +39,13 @@ export default function Home() {
           >
             Log In
           </Link>
+
+          <Link
+            href="/settings"
+            className="rounded-xl border border-slate-700 px-6 py-3 font-semibold text-white transition hover:bg-slate-900"
+          >
+            Settings
+          </Link>
         </div>
       </section>
     </main>

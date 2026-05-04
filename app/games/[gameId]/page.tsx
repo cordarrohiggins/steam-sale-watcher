@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import CheckCountdown from "@/components/CheckCountdown";
+import { supabase } from "@/lib/supabaseClient";
 
 import {
   CartesianGrid,
@@ -43,7 +44,8 @@ type GameInfo = {
 export default function GameHistoryPage() {
   const params = useParams<{ gameId: string }>();
   const gameId = params.gameId;
-  const [range, setRange] = useState("1m");
+  const [range, setRange] = useState<"1w" | "1m" | "3m" | "6m" | "1y" | "all">("1m");
+  const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,9 +76,38 @@ export default function GameHistoryPage() {
       : null;
 
   useEffect(() => {
+    async function loadDefaultRange() {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user.id;
+
+      if (!userId) {
+        setHasLoadedSettings(true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/settings?userId=${userId}`);
+        const result = await response.json();
+
+        if (response.ok && result.settings?.default_history_range) {
+          setRange(result.settings.default_history_range);
+        }
+      } finally {
+        setHasLoadedSettings(true);
+      }
+    }
+
+    loadDefaultRange();
+  }, []);
+
+  useEffect(() => {
     async function loadHistory() {
       setIsLoading(true);
       setErrorMessage("");
+
+      if (!hasLoadedSettings) {
+        return;
+      }
 
       try {
         const response = await fetch(
@@ -101,7 +132,7 @@ export default function GameHistoryPage() {
     }
 
     loadHistory();
-  }, [gameId, range]);
+  }, [gameId, range, hasLoadedSettings]);
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
@@ -156,7 +187,9 @@ export default function GameHistoryPage() {
             <div className="flex flex-col gap-2 sm:items-end">
               <select
                 value={range}
-                onChange={(event) => setRange(event.target.value)}
+                onChange={(event) =>
+                  setRange(event.target.value as "1w" | "1m" | "3m" | "6m" | "1y" | "all")
+                }
                 className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
               >
                 <option value="1w">1 week</option>

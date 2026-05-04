@@ -148,29 +148,44 @@ export async function GET(request: Request) {
         const isAlertMet = isPriceAlertMet || isDiscountAlertMet;
 
         if (isAlertMet && !rule.alert_triggered) {
-          const { data: userData, error: userError } =
-            await supabaseServer.auth.admin.getUserById(rule.user_id);
+          const { data: userSettings, error: userSettingsError } = await supabaseServer
+            .from("user_settings")
+            .select("email_alert_frequency")
+            .eq("user_id", rule.user_id)
+            .maybeSingle();
 
-          if (userError) {
-            throw new Error(userError.message);
+          if (userSettingsError) {
+            throw new Error(userSettingsError.message);
           }
 
-          const userEmail = userData.user?.email;
+          const emailAlertFrequency =
+            userSettings?.email_alert_frequency ?? "immediate";
 
-          if (!userEmail) {
-            throw new Error("Unable to find user email for alert.");
+          if (emailAlertFrequency === "immediate") {
+            const { data: userData, error: userError } =
+              await supabaseServer.auth.admin.getUserById(rule.user_id);
+
+            if (userError) {
+              throw new Error(userError.message);
+            }
+
+            const userEmail = userData.user?.email;
+
+            if (!userEmail) {
+              throw new Error("Unable to find user email for alert.");
+            }
+
+            await sendPriceAlertEmail({
+              to: userEmail,
+              gameName: priceData.name,
+              currentPrice: priceData.currentPrice,
+              targetPrice:
+                rule.alert_type === "target_price"
+                  ? targetPrice
+                  : priceData.currentPrice,
+              storeUrl: priceData.storeUrl,
+            });
           }
-
-          await sendPriceAlertEmail({
-            to: userEmail,
-            gameName: priceData.name,
-            currentPrice: priceData.currentPrice,
-            targetPrice:
-              rule.alert_type === "target_price"
-                ? targetPrice
-                : priceData.currentPrice,
-            storeUrl: priceData.storeUrl,
-          });
           const { error: insertAlertError } = await supabaseServer
             .from("alerts_sent")
             .insert({
@@ -179,7 +194,8 @@ export async function GET(request: Request) {
               watchlist_item_id: rule.id,
               price_at_alert: priceData.currentPrice,
               discount_at_alert: priceData.discountPercent,
-              alert_type: "target_price",
+              alert_type: rule.alert_type,
+              email_delivery_type: emailAlertFrequency,
             });
 
           if (insertAlertError) {

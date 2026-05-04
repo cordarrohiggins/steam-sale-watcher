@@ -48,6 +48,10 @@ export default function DashboardPage() {
   const [hideSoundtracks, setHideSoundtracks] = useState(true);
   const [hideDemos, setHideDemos] = useState(true);
   const [hideExtras, setHideExtras] = useState(true);
+  const [defaultAlertType, setDefaultAlertType] = useState<
+    "target_price" | "target_discount"
+  >("target_price");
+
   const [userId, setUserId] = useState<string | null>(null);
   const [addAlertTypes, setAddAlertTypes] = useState<
     Record<number, "target_price" | "target_discount">
@@ -74,6 +78,20 @@ export default function DashboardPage() {
       setUserId(data.session?.user.id ?? null);
       if (data.session?.user.id) {
         loadWatchlist(data.session.user.id);
+
+        const settingsResponse = await fetch(
+          `/api/settings?userId=${data.session.user.id}`
+        );
+
+        const settingsData = await settingsResponse.json();
+
+        if (settingsResponse.ok && settingsData.settings) {
+          setHideDlc(settingsData.settings.hide_dlc);
+          setHideSoundtracks(settingsData.settings.hide_soundtracks);
+          setHideDemos(settingsData.settings.hide_demos);
+          setHideExtras(settingsData.settings.hide_extras);
+          setDefaultAlertType(settingsData.settings.default_alert_type);
+        }
       }
       setIsCheckingSession(false);
     }
@@ -164,7 +182,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const selectedAlertType = addAlertTypes[game.steamAppId] ?? "target_price";
+    const selectedAlertType = addAlertTypes[game.steamAppId] ?? defaultAlertType;
 
     const targetPriceValue =
       targetPrices[game.steamAppId] === undefined ||
@@ -360,6 +378,10 @@ export default function DashboardPage() {
             <Link href="/deals" className="text-sm text-slate-400 hover:text-white">
               Browse deals
             </Link>
+
+            <Link href="/settings" className="text-sm text-slate-400 hover:text-white">
+              Settings
+            </Link>
           </div>
 
           {userEmail && (
@@ -493,7 +515,7 @@ export default function DashboardPage() {
 
                 <div className="grid gap-2 sm:grid-cols-[170px_150px_auto] sm:items-center">
                   <select
-                    value={addAlertTypes[game.steamAppId] ?? "target_price"}
+                    value={addAlertTypes[game.steamAppId] ?? defaultAlertType}
                     onChange={(event) =>
                       setAddAlertTypes((current) => ({
                         ...current,
@@ -508,7 +530,7 @@ export default function DashboardPage() {
                     <option value="target_discount">Discount percent</option>
                   </select>
 
-                  {(addAlertTypes[game.steamAppId] ?? "target_price") === "target_price" ? (
+                  {(addAlertTypes[game.steamAppId] ?? defaultAlertType) === "target_price" ? (
                     <input
                       type="number"
                       min="0"
