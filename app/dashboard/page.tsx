@@ -351,9 +351,15 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-sm text-slate-400 hover:text-white">
-            Back home
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-sm text-slate-400 hover:text-white">
+              Back home
+            </Link>
+
+            <Link href="/deals" className="text-sm text-slate-400 hover:text-white">
+              Browse deals
+            </Link>
+          </div>
 
           {userEmail && (
             <button

@@ -20,6 +20,10 @@ https://steam-sale-watcher.vercel.app/
 - Scheduled price checks every 2 hours with GitHub Actions
 - Add, update, and remove watched games
 - Responsive website-only design
+- Price and discount history with range filters and charts
+- Public deals page showing discounted tracked games
+- Deal sorting and filtering by discount, price, recent checks, and tracked count
+
 
 ## Tech Stack
 
@@ -86,6 +90,7 @@ https://steam-sale-watcher.vercel.app
 - Global alerts, such as “any game becomes free,” are planned as a future upgrade.
 - Sale end dates are shown when Steam exposes them through available store data, but many sales may only show as “Unknown” because Steam does not consistently provide the expiration date through the endpoints used by this app.
 - Price history begins when a game is first tracked by any user and updates whenever the scheduled checker runs. It does not include historical Steam prices from before the app started tracking that game.
+- The public deals page only shows games already tracked by Steam Sale Watcher users. It does not scan the full Steam catalog for every active deal.
 
 ## Future Improvements
 

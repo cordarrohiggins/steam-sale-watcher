@@ -1,0 +1,86 @@
+import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabaseServer";
+
+type GameRow = {
+  id: string;
+  steam_app_id: number;
+  name: string;
+  header_image: string | null;
+  store_url: string | null;
+  current_price: number | null;
+  original_price: number | null;
+  discount_percent: number | null;
+  currency: string | null;
+  is_free: boolean | null;
+  sale_ends_at: string | null;
+  last_checked_at: string | null;
+};
+
+type WatchlistCountRow = {
+  game_id: string;
+};
+
+export async function GET() {
+  try {
+    const { data: games, error: gamesError } = await supabaseServer
+      .from("games")
+      .select(
+        `
+        id,
+        steam_app_id,
+        name,
+        header_image,
+        store_url,
+        current_price,
+        original_price,
+        discount_percent,
+        currency,
+        is_free,
+        sale_ends_at,
+        last_checked_at
+      `
+      )
+      .not("current_price", "is", null)
+      .or("discount_percent.gt.0,is_free.eq.true")
+      .order("discount_percent", { ascending: false });
+
+    if (gamesError) {
+      return NextResponse.json(
+        { error: gamesError.message },
+        { status: 500 }
+      );
+    }
+
+    const { data: watchlistRows, error: watchlistError } = await supabaseServer
+      .from("watchlist_items")
+      .select("game_id")
+      .eq("alert_enabled", true);
+
+    if (watchlistError) {
+      return NextResponse.json(
+        { error: watchlistError.message },
+        { status: 500 }
+      );
+    }
+
+    const trackedCounts = new Map<string, number>();
+
+    for (const row of (watchlistRows ?? []) as WatchlistCountRow[]) {
+      trackedCounts.set(row.game_id, (trackedCounts.get(row.game_id) ?? 0) + 1);
+    }
+
+    const deals = ((games ?? []) as GameRow[]).map((game) => ({
+      ...game,
+      tracked_count: trackedCounts.get(game.id) ?? 0,
+    }));
+
+    return NextResponse.json({ deals });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to load deals",
+      },
+      { status: 500 }
+    );
+  }
+}
