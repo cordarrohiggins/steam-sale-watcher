@@ -73,6 +73,7 @@ export async function GET(request: Request) {
           discount_percent: priceData.discountPercent,
           currency: priceData.currency,
           is_free: priceData.isFree,
+          sale_ends_at: priceData.saleEndsAt,
           last_checked_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -205,6 +206,7 @@ export async function GET(request: Request) {
         originalPrice: priceData.originalPrice,
         discountPercent: priceData.discountPercent,
         currency: priceData.currency,
+        saleEndsAt: priceData.saleEndsAt,
         isFree: priceData.isFree,
       });
     }

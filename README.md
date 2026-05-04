@@ -84,13 +84,13 @@ https://steam-sale-watcher.vercel.app
 - Steam store data is fetched server-side and may not behave exactly like a fully official API.
 - Email alerts use Resend. Free-tier sending limits apply.
 - Global alerts, such as “any game becomes free,” are planned as a future upgrade.
+- Sale end dates are shown when Steam exposes them through available store data, but many sales may only show as “Unknown” because Steam does not consistently provide the expiration date through the endpoints used by this app.
 
 ## Future Improvements
 
 - Global free-game alerts
 - Global “under $5” deal alerts
 - Price history chart
-- Better filtering for DLC, demos, soundtracks, and non-game apps
 - Steam wishlist import
 - Browser push notifications
 - Public deals page

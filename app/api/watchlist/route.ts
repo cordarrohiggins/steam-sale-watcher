@@ -43,7 +43,8 @@ export async function GET(request: Request) {
           discount_percent,
           currency,
           is_free,
-          last_checked_at
+          last_checked_at,
+          sale_ends_at
         )
       `
       )

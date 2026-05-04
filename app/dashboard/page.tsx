@@ -30,6 +30,7 @@ type WatchlistItem = {
     currency: string | null;
     is_free: boolean | null;
     last_checked_at: string | null;
+    sale_ends_at: string | null;
   };
 };
 
@@ -671,6 +672,14 @@ export default function DashboardPage() {
                       {item.games.current_price === null
                         ? "Not checked yet"
                         : `$${Number(item.games.current_price).toFixed(2)}`}
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      Sale ends:{" "}
+                      {item.games.sale_ends_at
+                        ? new Date(item.games.sale_ends_at).toLocaleDateString()
+                        : item.games.discount_percent && item.games.discount_percent > 0
+                          ? "Unknown"
+                          : "Not currently on sale"}
                     </p>
                     <p className="text-sm text-slate-400">
                       Alert status:{" "}

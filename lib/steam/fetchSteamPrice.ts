@@ -10,7 +10,13 @@ type SteamAppDetailsResponse = {
         initial: number;
         final: number;
         discount_percent: number;
+        discount_expiration?: number;
       };
+      package_groups?: {
+        subs?: {
+          discount_expiration?: number;
+        }[];
+      }[];
     };
   };
 };
@@ -25,14 +31,44 @@ export type SteamPriceData = {
   discountPercent: number;
   currency: string;
   isFree: boolean;
+  saleEndsAt: string | null;
 };
+
+function getSaleEndsAt(
+  priceOverview?: {
+    discount_expiration?: number;
+  },
+  packageGroups?: {
+    subs?: {
+      discount_expiration?: number;
+    }[];
+  }[]
+) {
+  if (priceOverview?.discount_expiration) {
+    return new Date(priceOverview.discount_expiration * 1000).toISOString();
+  }
+
+  const packageExpirationDates =
+    packageGroups
+      ?.flatMap((group) => group.subs ?? [])
+      .map((sub) => sub.discount_expiration)
+      .filter((expiration): expiration is number => Boolean(expiration)) ?? [];
+
+  if (packageExpirationDates.length === 0) {
+    return null;
+  }
+
+  const soonestExpiration = Math.min(...packageExpirationDates);
+
+  return new Date(soonestExpiration * 1000).toISOString();
+}
 
 export async function fetchSteamPrice(
   steamAppId: number,
   countryCode = "us"
 ): Promise<SteamPriceData> {
   const response = await fetch(
-    `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=${countryCode}&filters=basic,price_overview`,
+    `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=${countryCode}&l=english`,
     {
       cache: "no-store",
     }
@@ -69,6 +105,7 @@ export async function fetchSteamPrice(
         : null,
     discountPercent: priceOverview?.discount_percent ?? 0,
     currency: priceOverview?.currency ?? "USD",
+    saleEndsAt: getSaleEndsAt(priceOverview, game.package_groups),
     isFree,
   };
 }
