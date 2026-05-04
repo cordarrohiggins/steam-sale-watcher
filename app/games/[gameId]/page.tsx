@@ -302,7 +302,7 @@ export default function GameHistoryPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
+                <table className="w-full min-w-130 text-left text-sm">
                   <thead className="text-slate-400">
                     <tr className="border-b border-slate-800">
                       <th className="py-2 pr-4 font-medium">Date</th>
