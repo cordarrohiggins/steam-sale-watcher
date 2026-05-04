@@ -83,19 +83,37 @@ export async function GET(request: Request) {
         throw new Error(updateGameError.message);
       }
 
-      const { error: insertPriceCheckError } = await supabaseServer
-        .from("price_checks")
-        .insert({
-          game_id: game.id,
-          price: priceData.currentPrice,
-          original_price: priceData.originalPrice,
-          discount_percent: priceData.discountPercent,
-          currency: priceData.currency,
-          is_free: priceData.isFree,
-        });
+      const startOfToday = new Date();
+      startOfToday.setUTCHours(0, 0, 0, 0);
 
-      if (insertPriceCheckError) {
-        throw new Error(insertPriceCheckError.message);
+      const { data: existingPriceCheckToday, error: existingPriceCheckError } =
+        await supabaseServer
+          .from("price_checks")
+          .select("id")
+          .eq("game_id", game.id)
+          .gte("checked_at", startOfToday.toISOString())
+          .limit(1)
+          .maybeSingle();
+
+      if (existingPriceCheckError) {
+        throw new Error(existingPriceCheckError.message);
+      }
+
+      if (!existingPriceCheckToday) {
+        const { error: insertPriceCheckError } = await supabaseServer
+          .from("price_checks")
+          .insert({
+            game_id: game.id,
+            price: priceData.currentPrice,
+            original_price: priceData.originalPrice,
+            discount_percent: priceData.discountPercent,
+            currency: priceData.currency,
+            is_free: priceData.isFree,
+          });
+
+        if (insertPriceCheckError) {
+          throw new Error(insertPriceCheckError.message);
+        }
       }
 
       const { data: watchlistRules, error: watchlistRulesError } =

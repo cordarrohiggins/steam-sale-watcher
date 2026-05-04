@@ -36,6 +36,7 @@ export async function GET(request: Request) {
         alert_enabled,
         alert_triggered,
         games (
+          id,
           steam_app_id,
           name,
           store_url,

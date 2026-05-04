@@ -22,6 +22,7 @@ type WatchlistItem = {
   alert_enabled: boolean;
   alert_triggered: boolean;
   games: {
+    id: string;
     steam_app_id: number;
     name: string;
     store_url: string | null;
@@ -702,6 +703,13 @@ export default function DashboardPage() {
                         View on Steam
                       </a>
                     )}
+
+                    <Link
+                      href={`/games/${item.games.id}`}
+                      className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
+                    >
+                      View history
+                    </Link>
 
                     <button
                       onClick={() => handleRemoveFromWatchlist(item.id)}
