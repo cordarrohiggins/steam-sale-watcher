@@ -5,6 +5,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
 type PriceHistoryItem = {
   id: string;
   price: number | null;
@@ -37,6 +47,30 @@ export default function GameHistoryPage() {
   const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+    const chartData = [...priceHistory]
+    .reverse()
+    .map((historyItem) => ({
+      date: new Date(historyItem.checked_at).toLocaleDateString(),
+      price: historyItem.is_free ? 0 : historyItem.price,
+      originalPrice: historyItem.original_price,
+      discount: historyItem.discount_percent,
+    }));
+
+  const validPrices = priceHistory
+    .map((historyItem) => (historyItem.is_free ? 0 : historyItem.price))
+    .filter((price): price is number => price !== null);
+
+  const lowestTrackedPrice =
+    validPrices.length > 0 ? Math.min(...validPrices) : null;
+
+  const highestTrackedPrice =
+    validPrices.length > 0 ? Math.max(...validPrices) : null;
+
+  const highestTrackedDiscount =
+    priceHistory.length > 0
+      ? Math.max(...priceHistory.map((historyItem) => historyItem.discount_percent))
+      : null;
 
   useEffect(() => {
     async function loadHistory() {
@@ -146,8 +180,10 @@ export default function GameHistoryPage() {
           </div>
 
           <p className="mt-5 text-sm text-slate-400">
-            Price history begins when this game is first tracked by the app. The
-            checker saves one history point per day.
+            Price history begins once any user adds this game to their watchlist. From
+            that point on, Steam Sale Watcher checks the game during scheduled price
+            updates and saves one shared history point per day for that game. Prices
+            from before the game was first tracked are not available.
           </p>
 
           {isLoading && (
@@ -160,49 +196,151 @@ export default function GameHistoryPage() {
             </p>
           )}
 
-          {!isLoading && !errorMessage && priceHistory.length === 0 && (
+                    {!isLoading && !errorMessage && priceHistory.length === 0 && (
             <p className="mt-6 text-sm text-slate-400">
               No price history yet.
             </p>
           )}
 
           {priceHistory.length > 0 && (
-            <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-130 text-left text-sm">
-                <thead className="text-slate-400">
-                  <tr className="border-b border-slate-800">
-                    <th className="py-2 pr-4 font-medium">Date</th>
-                    <th className="py-2 pr-4 font-medium">Price</th>
-                    <th className="py-2 pr-4 font-medium">Original</th>
-                    <th className="py-2 pr-4 font-medium">Discount</th>
-                  </tr>
-                </thead>
+            <div className="mt-6 space-y-6">
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-sm text-slate-400">Lowest tracked price</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {lowestTrackedPrice === null
+                      ? "Unavailable"
+                      : `$${lowestTrackedPrice.toFixed(2)}`}
+                  </p>
+                </div>
 
-                <tbody>
-                  {priceHistory.map((historyItem) => (
-                    <tr key={historyItem.id} className="border-b border-slate-900">
-                      <td className="py-2 pr-4 text-slate-300">
-                        {new Date(historyItem.checked_at).toLocaleDateString()}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-300">
-                        {historyItem.is_free
-                          ? "Free"
-                          : historyItem.price === null
-                            ? "Unavailable"
-                            : `$${Number(historyItem.price).toFixed(2)}`}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-300">
-                        {historyItem.original_price === null
-                          ? "Unavailable"
-                          : `$${Number(historyItem.original_price).toFixed(2)}`}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-300">
-                        {historyItem.discount_percent}%
-                      </td>
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-sm text-slate-400">Highest tracked price</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {highestTrackedPrice === null
+                      ? "Unavailable"
+                      : `$${highestTrackedPrice.toFixed(2)}`}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-sm text-slate-400">Highest discount</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {highestTrackedDiscount === null
+                      ? "Unavailable"
+                      : `${highestTrackedDiscount}%`}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-sm text-slate-400">History points</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {priceHistory.length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold">Price over time</h2>
+                  <p className="text-sm text-slate-400">
+                    Current price and original price based on saved daily checks.
+                  </p>
+                </div>
+
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        name="Current price"
+                        strokeWidth={2}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="originalPrice"
+                        name="Original price"
+                        strokeWidth={2}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold">Discount over time</h2>
+                  <p className="text-sm text-slate-400">
+                    Discount percent from each saved daily price check.
+                  </p>
+                </div>
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="discount"
+                        name="Discount percent"
+                        strokeWidth={2}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead className="text-slate-400">
+                    <tr className="border-b border-slate-800">
+                      <th className="py-2 pr-4 font-medium">Date</th>
+                      <th className="py-2 pr-4 font-medium">Price</th>
+                      <th className="py-2 pr-4 font-medium">Original</th>
+                      <th className="py-2 pr-4 font-medium">Discount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+
+                  <tbody>
+                    {priceHistory.map((historyItem) => (
+                      <tr
+                        key={historyItem.id}
+                        className="border-b border-slate-900"
+                      >
+                        <td className="py-2 pr-4 text-slate-300">
+                          {new Date(historyItem.checked_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-300">
+                          {historyItem.is_free
+                            ? "Free"
+                            : historyItem.price === null
+                              ? "Unavailable"
+                              : `$${Number(historyItem.price).toFixed(2)}`}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-300">
+                          {historyItem.original_price === null
+                            ? "Unavailable"
+                            : `$${Number(historyItem.original_price).toFixed(2)}`}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-300">
+                          {historyItem.discount_percent}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
