@@ -85,6 +85,7 @@ https://steam-sale-watcher.vercel.app
 - Email alerts use Resend. Free-tier sending limits apply.
 - Global alerts, such as “any game becomes free,” are planned as a future upgrade.
 - Sale end dates are shown when Steam exposes them through available store data, but many sales may only show as “Unknown” because Steam does not consistently provide the expiration date through the endpoints used by this app.
+- Price history begins when a game is first tracked by any user and updates whenever the scheduled checker runs. It does not include historical Steam prices from before the app started tracking that game.
 
 ## Future Improvements
 
