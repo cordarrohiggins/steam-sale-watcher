@@ -417,13 +417,30 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold">Search games</h2>
 
           <form onSubmit={handleSearch} className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search Terraria, Portal, Hades..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-slate-400"
-            />
+            <div className="relative w-full">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search Terraria, Portal, Hades..."
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 pr-11 text-white outline-none transition placeholder:text-slate-500 focus:border-slate-400"
+              />
+
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setSearchError("");
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
 
             <button
               type="submit"
