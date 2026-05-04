@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
+import CheckCountdown from "@/components/CheckCountdown";
 
 import {
   CartesianGrid,
@@ -185,6 +186,10 @@ export default function GameHistoryPage() {
             updates and saves one shared history point per day for that game. Prices
             from before the game was first tracked are not available.
           </p>
+
+          <div className="mt-5">
+            <CheckCountdown type="daily-history" />
+          </div>
 
           {isLoading && (
             <p className="mt-6 text-sm text-slate-400">Loading price history...</p>

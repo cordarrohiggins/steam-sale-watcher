@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import CheckCountdown from "@/components/CheckCountdown";
 
 type SteamSearchResult = {
   steamAppId: number;
@@ -384,6 +385,10 @@ export default function DashboardPage() {
           <p className="mt-3 text-slate-300">
             Search for Steam games and add them to your watchlist.
           </p>
+        </div>
+
+        <div className="mt-8">
+          <CheckCountdown type="two-hour-check" />
         </div>
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
