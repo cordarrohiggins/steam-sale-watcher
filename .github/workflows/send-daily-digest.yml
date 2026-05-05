@@ -2,8 +2,13 @@ name: Send Daily Digest
 
 on:
   schedule:
-    - cron: "0 13 * * *"
+    - cron: "0 20 * * *"
+      timezone: "America/New_York"
   workflow_dispatch:
+
+concurrency:
+  group: send-daily-digest
+  cancel-in-progress: false
 
 jobs:
   send-daily-digest:
