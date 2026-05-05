@@ -137,8 +137,10 @@ export default function AboutPage() {
               Steam Sale Watcher was designed and developed by{" "}
               <span className="font-semibold text-white">
                 Cordarro Higgins Redman
-              </span>{" "}
-              as a full-stack portfolio project.
+              </span>
+              , a recent Clemson University Computer Science graduate building practical
+              full-stack projects as portfolio pieces while actively job hunting for
+              software engineering opportunities.
             </p>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -161,6 +163,28 @@ export default function AboutPage() {
               </a>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-2xl font-semibold">Support future work</h2>
+
+          <p className="mt-4 leading-7 text-slate-300">
+            If you would like to support me, future projects, or continued improvements
+            to Steam Sale Watcher, feel free to reach out by email. I do not have a
+            donation link set up here yet, but I appreciate any interest in supporting
+            the work.
+          </p>
+
+          <a
+            href="mailto:cordarrohiggins@gmail.com?subject=Supporting%20Steam%20Sale%20Watcher"
+            className="mt-5 inline-block rounded-xl bg-white px-5 py-3 font-semibold text-slate-950 transition hover:bg-slate-200"
+          >
+            Email me about support
+          </a>
+
+          <p className="mt-3 text-sm text-slate-400">
+            cordarrohiggins@gmail.com
+          </p>
         </div>
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
