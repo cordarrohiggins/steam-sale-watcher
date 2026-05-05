@@ -414,14 +414,6 @@ export default function DealsPage() {
                       : `$${Number(deal.original_price).toFixed(2)}`}
                   </p>
                   <p>
-                    Sale ends:{" "}
-                    {deal.sale_ends_at
-                      ? new Date(deal.sale_ends_at).toLocaleDateString()
-                      : deal.discount_percent && deal.discount_percent > 0
-                        ? "Unknown"
-                        : "Not currently on sale"}
-                  </p>
-                  <p>
                     Last checked:{" "}
                     {deal.last_checked_at
                       ? new Date(deal.last_checked_at).toLocaleString()

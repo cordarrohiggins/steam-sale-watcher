@@ -759,14 +759,6 @@ export default function DashboardPage() {
                         : `$${Number(item.games.current_price).toFixed(2)}`}
                     </p>
                     <p className="text-sm text-slate-400">
-                      Sale ends:{" "}
-                      {item.games.sale_ends_at
-                        ? new Date(item.games.sale_ends_at).toLocaleDateString()
-                        : item.games.discount_percent && item.games.discount_percent > 0
-                          ? "Unknown"
-                          : "Not currently on sale"}
-                    </p>
-                    <p className="text-sm text-slate-400">
                       Alert status:{" "}
                       {item.alert_triggered
                         ? "Triggered"

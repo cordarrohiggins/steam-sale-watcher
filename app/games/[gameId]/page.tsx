@@ -181,14 +181,6 @@ export default function GameHistoryPage() {
                       : `$${Number(gameInfo.current_price).toFixed(2)}`}
                   </p>
                   <p>Discount: {gameInfo.discount_percent ?? 0}%</p>
-                  <p>
-                    Sale ends:{" "}
-                    {gameInfo.sale_ends_at
-                      ? new Date(gameInfo.sale_ends_at).toLocaleDateString()
-                      : gameInfo.discount_percent && gameInfo.discount_percent > 0
-                        ? "Unknown"
-                        : "Not currently on sale"}
-                  </p>
                 </div>
               )}
             </div>

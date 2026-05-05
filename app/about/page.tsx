@@ -169,7 +169,7 @@ export default function AboutPage() {
           <ul className="mt-4 space-y-3 text-slate-300">
             <li>Alerts are not instant. Watchlist prices are checked every 2 hours.</li>
             <li>Public discovery deals refresh once per day.</li>
-            <li>Sale end dates are shown only when Steam exposes them through available store data.</li>
+            <li>Sale end dates are not currently shown because Steam does not consistently expose reliable sale expiration data through the store endpoints used by this app.</li>
             <li>Price history starts when the app first begins tracking a game.</li>
             <li>The public deals page uses a capped Steam Specials discovery list, not a full Steam catalog scan.</li>
           </ul>

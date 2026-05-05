@@ -102,7 +102,7 @@ The project uses three scheduled GitHub Actions workflows:
 - Steam store data is fetched server-side and may not behave exactly like a fully official API.
 - Email alerts use Resend. Free-tier sending limits apply.
 - Global alerts, such as “any game becomes free,” are planned as a future upgrade.
-- Sale end dates are shown when Steam exposes them through available store data, but many sales may only show as “Unknown” because Steam does not consistently provide the expiration date through the endpoints used by this app.
+- Sale end dates are not currently shown because Steam does not consistently expose reliable discount expiration data through the store endpoints used by this app.
 - Price history begins when a game is first tracked by any user and updates whenever the scheduled checker runs. It does not include historical Steam prices from before the app started tracking that game.
 - The public deals page only shows games already tracked by Steam Sale Watcher users. It does not scan the full Steam catalog for every active deal.
 - Daily digest emails only include alerts recorded after the user selects daily digest mode. Alerts that were already triggered before changing the setting may not be included unless the alert rule is updated or triggered again later.
