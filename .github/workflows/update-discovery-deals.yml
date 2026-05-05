@@ -1,0 +1,21 @@
+name: Update Discovery Deals
+
+on:
+  schedule:
+    - cron: "20 20 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch:
+  
+concurrency:
+  group: send-daily-digest
+  cancel-in-progress: false
+
+jobs:
+  update-discovery-deals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call discovery deals endpoint
+        run: |
+          curl --fail -X GET "${{ secrets.APP_URL }}/api/jobs/update-discovery-deals" \
+            -H "Authorization: Bearer ${{ secrets.CHECK_PRICES_SECRET }}"

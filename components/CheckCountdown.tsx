@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type CountdownType = "two-hour-check" | "daily-history";
+type CountdownType = "two-hour-check" | "daily-history" | "daily-discovery";
 
 type CheckCountdownProps = {
   type: CountdownType;
@@ -11,9 +11,6 @@ type CheckCountdownProps = {
 function getNextTwoHourCheck(now: Date) {
   const next = new Date(now);
 
-  // GitHub Actions cron:
-  // 15 */2 * * *
-  // This means every even UTC hour at minute 15.
   next.setUTCMinutes(15, 0, 0);
 
   while (next <= now || next.getUTCHours() % 2 !== 0) {
@@ -25,11 +22,6 @@ function getNextTwoHourCheck(now: Date) {
 }
 
 function getNextDailyHistoryCheck(now: Date) {
-  // GitHub Actions daily cron should be:
-  // 20 20 * * *
-  // timezone: America/New_York
-  //
-  // This function calculates the next 8:20 PM Eastern time.
   const easternFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric",
@@ -55,11 +47,12 @@ function getNextDailyHistoryCheck(now: Date) {
   const hasPassedToday =
     easternHour > 20 || (easternHour === 20 && easternMinute >= 20);
 
+  const targetDay = easternDay + (hasPassedToday ? 1 : 0);
+
   const targetEasternDate = new Date(
-    Date.UTC(easternYear, easternMonth - 1, easternDay + (hasPassedToday ? 1 : 0), 20, 20, 0)
+    Date.UTC(easternYear, easternMonth - 1, targetDay, 20, 20, 0)
   );
 
-  // Convert the intended Eastern wall-clock time into the user's real Date.
   const offsetFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     timeZoneName: "shortOffset",
@@ -76,7 +69,7 @@ function getNextDailyHistoryCheck(now: Date) {
     Date.UTC(
       easternYear,
       easternMonth - 1,
-      easternDay + (hasPassedToday ? 1 : 0),
+      targetDay,
       20 - offsetHours,
       20,
       0
@@ -95,32 +88,56 @@ function formatTimeRemaining(milliseconds: number) {
 }
 
 export default function CheckCountdown({ type }: CheckCountdownProps) {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
+    const tick = () => {
       setNow(new Date());
-    }, 1000);
+    };
+
+    tick();
+
+    const intervalId = window.setInterval(tick, 1000);
 
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const nextCheck =
+  const title =
     type === "daily-history"
+      ? "Next daily history point"
+      : type === "daily-discovery"
+        ? "Next discovery deals refresh"
+        : "Next scheduled price check";
+
+  const description =
+    type === "daily-history"
+      ? "Daily digest runs once per day around 8:20 PM Eastern. GitHub Actions may start a few minutes late."
+      : type === "daily-discovery"
+        ? "Discovery deals refresh once per day around 8:20 PM Eastern from Steam Specials and only show games currently on sale."
+        : "Scheduled price checks run every 2 hours around minute 15 and power alerts, prices, and deal updates.";
+
+  if (!now) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+        <p className="text-sm text-slate-400">{title}</p>
+
+        <p className="mt-1 text-2xl font-semibold">Loading...</p>
+
+        <p className="mt-2 text-sm text-slate-400">
+          Estimated time: calculating...
+        </p>
+
+        <p className="mt-2 text-xs text-slate-500">{description}</p>
+      </div>
+    );
+  }
+
+  const nextCheck =
+    type === "daily-history" || type === "daily-discovery"
       ? getNextDailyHistoryCheck(now)
       : getNextTwoHourCheck(now);
 
   const timeRemaining = nextCheck.getTime() - now.getTime();
-
-  const title =
-    type === "daily-history"
-      ? "Next daily digest"
-      : "Next scheduled price check";
-
-  const description =
-    type === "daily-history"
-      ? "Daily digest runs around 8:20 PM Eastern. GitHub Actions may start a few minutes late."
-      : "Scheduled price checks run every 2 hours around minute 15 and power alerts, prices, and deal updates.";
 
   const estimatedTime =
     type === "daily-history"
@@ -128,7 +145,7 @@ export default function CheckCountdown({ type }: CheckCountdownProps) {
           timeZone: "America/New_York",
           dateStyle: "medium",
           timeStyle: "short",
-        }) + " ET"
+        }) + " Eastern"
       : nextCheck.toLocaleString();
 
   return (
