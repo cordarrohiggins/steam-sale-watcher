@@ -27,6 +27,9 @@ https://steam-sale-watcher.vercel.app/
 - Email alert frequency options: immediate alerts, daily digest, or email off
 - Daily digest workflow for grouped deal alert emails
 - User defaults for alert type, price history range, and Steam search filters
+- Public Steam Specials discovery page for curated sale browsing
+- Daily discovery refresh using a capped Steam Specials list instead of scanning the full Steam catalog
+- Deal source badges, sorting, filtering, pagination, and tracked-count display
 
 ## Tech Stack
 
@@ -52,6 +55,7 @@ https://steam-sale-watcher.vercel.app/
 9. If the rule is met, the app sends an email alert.
 10. The app marks the alert as triggered so users do not receive duplicate emails every 2 hours.
 11. Users can choose how emails are delivered from the settings page. Immediate alerts are sent during the 2-hour price checker. Daily digest users have matching alerts collected and sent in one grouped email by a separate daily GitHub Actions workflow. Users can also turn email alerts off while still keeping dashboard deal badges.
+12. The public deals page combines user-tracked discounted games with a curated Steam Specials discovery list. A separate daily GitHub Actions workflow calls a protected discovery endpoint, checks a capped list of Steam Specials games, saves discounted results, and labels those deals separately from user-tracked watchlist deals.
 
 ## Environment Variables
 
@@ -84,9 +88,10 @@ Example:
 https://steam-sale-watcher.vercel.app
 ```
 
-The project uses two scheduled GitHub Actions workflows:
+The project uses three scheduled GitHub Actions workflows:
 
 - `Check Steam Prices`: runs every 2 hours and updates tracked game prices, alert states, public deals, and daily price history.
+- `Update Discovery Deals`: runs once per day and refreshes the public Steam Specials discovery list.
 - `Send Daily Digest`: runs once per day and sends grouped deal emails to users who selected daily digest alerts.
 
 ## Current Limitations
@@ -101,6 +106,8 @@ The project uses two scheduled GitHub Actions workflows:
 - Price history begins when a game is first tracked by any user and updates whenever the scheduled checker runs. It does not include historical Steam prices from before the app started tracking that game.
 - The public deals page only shows games already tracked by Steam Sale Watcher users. It does not scan the full Steam catalog for every active deal.
 - Daily digest emails only include alerts recorded after the user selects daily digest mode. Alerts that were already triggered before changing the setting may not be included unless the alert rule is updated or triggered again later.
+- The public discovery page uses a capped Steam Specials list and does not scan the full Steam catalog.
+- Steam Specials discovery refreshes once per day, so newly added Steam discounts may not appear immediately.
 
 ## Future Improvements
 
