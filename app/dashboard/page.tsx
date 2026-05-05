@@ -379,6 +379,10 @@ export default function DashboardPage() {
               Browse deals
             </Link>
 
+            <Link href="/about" className="text-sm text-slate-400 hover:text-white">
+              About
+            </Link>
+
             <Link href="/settings" className="text-sm text-slate-400 hover:text-white">
               Settings
             </Link>

@@ -34,6 +34,13 @@ export default function Home() {
           </Link>
 
           <Link
+            href="/about"
+            className="rounded-xl border border-slate-700 px-6 py-3 font-semibold text-white transition hover:bg-slate-900"
+          >
+            About
+          </Link>
+
+          <Link
             href="/login"
             className="rounded-xl border border-slate-700 px-6 py-3 font-semibold text-white transition hover:bg-slate-900"
           >
