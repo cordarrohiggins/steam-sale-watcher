@@ -121,7 +121,17 @@ export default function GameHistoryPage() {
         }
 
         setGameInfo(data.game ?? null);
-        setPriceHistory(data.priceHistory ?? []);
+        const dedupedHistoryByDisplayDate = new Map<string, PriceHistoryItem>();
+
+          for (const historyItem of data.priceHistory ?? []) {
+            const displayDate = new Date(historyItem.checked_at).toLocaleDateString();
+
+            if (!dedupedHistoryByDisplayDate.has(displayDate)) {
+              dedupedHistoryByDisplayDate.set(displayDate, historyItem);
+            }
+          }
+
+          setPriceHistory(Array.from(dedupedHistoryByDisplayDate.values()));
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Unable to load price history"
