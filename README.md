@@ -104,7 +104,7 @@ The project uses three scheduled GitHub Actions workflows:
 - Email alerts use Resend. Free-tier sending limits apply.
 - Global alerts, such as “any game becomes free,” are planned as a future upgrade.
 - Sale end dates are not currently shown because Steam does not consistently expose reliable discount expiration data through the store endpoints used by this app.
-- Price history begins when a game is first tracked by any user and updates whenever the scheduled checker runs. It does not include historical Steam prices from before the app started tracking that game.
+- Price history begins once a game is first tracked through a user watchlist or appears in Steam Specials discovery. It does not include historical Steam prices from before the app started tracking that game.
 - The public deals page only shows games already tracked by Steam Sale Watcher users. It does not scan the full Steam catalog for every active deal.
 - Daily digest emails only include alerts recorded after the user selects daily digest mode. Alerts that were already triggered before changing the setting may not be included unless the alert rule is updated or triggered again later.
 - The public discovery page uses a capped Steam Specials list and does not scan the full Steam catalog.
@@ -112,6 +112,7 @@ The project uses three scheduled GitHub Actions workflows:
 - Pricing currently assumes the US Steam region and USD. Multi-currency and regional pricing support are planned future improvements.
 - The interface currently uses English only. Language/localization support is planned as a future improvement.
 - Display time zone settings affect countdown and estimated-time displays only. Scheduled jobs still run on fixed UTC GitHub Actions cron schedules.
+- Steam Specials discovery games only gain new history points on days when they appear in the capped discovery refresh or are added to a user watchlist.
 
 ## Future Improvements
 

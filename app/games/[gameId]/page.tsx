@@ -222,10 +222,10 @@ export default function GameHistoryPage() {
           </div>
 
           <p className="mt-5 text-sm text-slate-400">
-            Price history begins once any user adds this game to their watchlist. From
-            that point on, Steam Sale Watcher checks the game during scheduled price
-            updates and saves one shared history point per day for that game. Prices
-            from before the game was first tracked are not available.
+            Price history begins once a game is first tracked through a user watchlist or
+            appears in Steam Specials discovery. From that point on, Steam Sale Watcher
+            saves one shared history point per day when the game is checked. Prices from
+            before the game was first tracked by the app are not available.
           </p>
 
           <div className="mt-5">
