@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import CheckCountdown from "@/components/CheckCountdown";
 import { supabase } from "@/lib/supabaseClient";
+import AppNav from "@/components/AppNav";
 
 import {
   CartesianGrid,
@@ -154,9 +155,7 @@ export default function GameHistoryPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
-        <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
-          Back to dashboard
-        </Link>
+        <AppNav />
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">

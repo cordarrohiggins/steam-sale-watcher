@@ -1,27 +1,12 @@
 import Link from "next/link";
+import AppNav from "@/components/AppNav";
 
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-center gap-4">
-          <Link href="/" className="text-sm text-slate-400 hover:text-white">
-            Back home
-          </Link>
-
-          <Link
-            href="/deals"
-            className="text-sm text-slate-400 hover:text-white"
-          >
-            Browse deals
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="text-sm text-slate-400 hover:text-white"
-          >
-            Dashboard
-          </Link>
+          <AppNav />
         </div>
 
         <div className="mt-10 rounded-2xl border border-slate-800 bg-slate-900 p-8">

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import CheckCountdown from "@/components/CheckCountdown";
 import { supabase } from "@/lib/supabaseClient";
+import AppNav from "@/components/AppNav";
 
 type Deal = {
   id: string;
@@ -200,9 +201,7 @@ export default function DealsPage() {
       <section className="mx-auto max-w-6xl">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <Link href="/" className="text-sm text-slate-400 hover:text-white">
-              Back home
-            </Link>
+            <AppNav />
 
             <h1 className="mt-5 text-4xl font-bold">Public Deals</h1>
             <p className="mt-3 max-w-3xl text-slate-300">
@@ -214,13 +213,6 @@ export default function DealsPage() {
               <CheckCountdown type="daily-discovery" displayTimeZone={displayTimeZone} />
             </div>
           </div>
-
-          <Link
-            href="/dashboard"
-            className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
-          >
-            Go to Dashboard
-          </Link>
         </div>
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">

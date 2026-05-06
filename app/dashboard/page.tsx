@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
 import CheckCountdown from "@/components/CheckCountdown";
+import AppNav from "@/components/AppNav";
 
 type SteamSearchResult = {
   steamAppId: number;
@@ -126,6 +127,7 @@ export default function DashboardPage() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setUserEmail(null);
+    setUserId(null);
   }
 
   const searchSteamGames = useCallback(async function searchSteamGames(query: string) {
@@ -371,44 +373,38 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm text-slate-400 hover:text-white">
-              Back home
-            </Link>
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <AppNav />
 
-            <Link href="/deals" className="text-sm text-slate-400 hover:text-white">
-              Browse deals
-            </Link>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            {userEmail ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-xl border border-slate-700 px-5 py-2 font-semibold text-white transition hover:bg-slate-900"
+              >
+                Log out
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-xl border border-slate-700 px-5 py-2 font-semibold text-white transition hover:bg-slate-900"
+              >
+                Log in
+              </Link>
+            )}
 
-            <Link href="/about" className="text-sm text-slate-400 hover:text-white">
-              About
-            </Link>
-
-            <Link href="/settings" className="text-sm text-slate-400 hover:text-white">
-              Settings
-            </Link>
+            <p className="text-sm text-slate-400">
+              {isCheckingSession
+                ? "Checking login status..."
+                : userEmail
+                  ? `Logged in as ${userEmail}`
+                  : "Not logged in"}
+            </p>
           </div>
-
-          {userEmail && (
-            <button
-              onClick={handleLogout}
-              className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900"
-            >
-              Log out
-            </button>
-          )}
         </div>
 
         <div className="mt-8">
-          <p className="text-sm text-slate-400">
-            {isCheckingSession
-              ? "Checking login status..."
-              : userEmail
-                ? `Logged in as ${userEmail}`
-                : "Not logged in"}
-          </p>
-
           <h1 className="mt-3 text-3xl font-bold">Dashboard</h1>
           <p className="mt-3 text-slate-300">
             Search for Steam games and add them to your watchlist.

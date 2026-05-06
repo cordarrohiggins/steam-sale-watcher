@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import AppNav from "@/components/AppNav";
 
 type EmailAlertFrequency = "immediate" | "daily_digest" | "off";
 type DefaultAlertType = "target_price" | "target_discount";
@@ -151,18 +152,7 @@ export default function SettingsPage() {
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm text-slate-400 hover:text-white">
-              Back home
-            </Link>
-
-            <Link
-              href="/dashboard"
-              className="text-sm text-slate-400 hover:text-white"
-            >
-              Dashboard
-            </Link>
-          </div>
+          <AppNav />
         </div>
 
         <div className="mt-8">
