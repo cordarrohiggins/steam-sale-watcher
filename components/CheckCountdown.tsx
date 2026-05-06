@@ -6,6 +6,7 @@ type CountdownType = "two-hour-check" | "daily-history" | "daily-discovery";
 
 type CheckCountdownProps = {
   type: CountdownType;
+  displayTimeZone?: string;
 };
 
 function getNextTwoHourCheck(now: Date) {
@@ -77,6 +78,28 @@ function getNextDailyHistoryCheck(now: Date) {
   );
 }
 
+function getResolvedTimeZone(displayTimeZone?: string) {
+  if (!displayTimeZone || displayTimeZone === "auto") {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+
+  return displayTimeZone;
+}
+
+function formatEstimatedTime(date: Date, displayTimeZone?: string) {
+  const timeZone = getResolvedTimeZone(displayTimeZone);
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+    timeZoneName: "short",
+  }).format(date);
+}
+
 function formatTimeRemaining(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
 
@@ -87,7 +110,10 @@ function formatTimeRemaining(milliseconds: number) {
   return `${hours}h ${minutes}m ${seconds}s`;
 }
 
-export default function CheckCountdown({ type }: CheckCountdownProps) {
+export default function CheckCountdown({
+  type,
+  displayTimeZone,
+}: CheckCountdownProps) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -139,15 +165,6 @@ export default function CheckCountdown({ type }: CheckCountdownProps) {
 
   const timeRemaining = nextCheck.getTime() - now.getTime();
 
-  const estimatedTime =
-    type === "daily-history"
-      ? nextCheck.toLocaleString("en-US", {
-          timeZone: "America/New_York",
-          dateStyle: "medium",
-          timeStyle: "short",
-        }) + " Eastern"
-      : nextCheck.toLocaleString();
-
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
       <p className="text-sm text-slate-400">{title}</p>
@@ -157,7 +174,7 @@ export default function CheckCountdown({ type }: CheckCountdownProps) {
       </p>
 
       <p className="mt-2 text-sm text-slate-400">
-        Estimated time: {estimatedTime}
+        Estimated time: {formatEstimatedTime(nextCheck, displayTimeZone)}
       </p>
 
       <p className="mt-2 text-xs text-slate-500">{description}</p>

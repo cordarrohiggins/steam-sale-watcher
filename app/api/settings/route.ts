@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 
+type DisplayTimeZone =
+  | "auto"
+  | "UTC"
+  | "America/New_York"
+  | "America/Chicago"
+  | "America/Denver"
+  | "America/Los_Angeles"
+  | "America/Phoenix"
+  | "America/Anchorage"
+  | "Pacific/Honolulu"
+  | "Europe/London"
+  | "Europe/Paris"
+  | "Asia/Tokyo"
+  | "Australia/Sydney";
+
 type UserSettingsRequest = {
   userId: string;
   emailAlertFrequency: "immediate" | "daily_digest" | "off";
   defaultAlertType: "target_price" | "target_discount";
   defaultHistoryRange: "1w" | "1m" | "3m" | "6m" | "1y" | "all";
+  displayTimeZone: DisplayTimeZone;
   hideDlc: boolean;
   hideSoundtracks: boolean;
   hideDemos: boolean;
@@ -16,6 +32,7 @@ const defaultSettings = {
   email_alert_frequency: "immediate",
   default_alert_type: "target_price",
   default_history_range: "1m",
+  display_time_zone: "auto",
   hide_dlc: true,
   hide_soundtracks: true,
   hide_demos: true,
@@ -87,12 +104,28 @@ export async function PATCH(request: Request) {
     const validEmailFrequencies = ["immediate", "daily_digest", "off"];
     const validAlertTypes = ["target_price", "target_discount"];
     const validHistoryRanges = ["1w", "1m", "3m", "6m", "1y", "all"];
+    const validDisplayTimeZones = [
+      "auto",
+      "UTC",
+      "America/New_York",
+      "America/Chicago",
+      "America/Denver",
+      "America/Los_Angeles",
+      "America/Phoenix",
+      "America/Anchorage",
+      "Pacific/Honolulu",
+      "Europe/London",
+      "Europe/Paris",
+      "Asia/Tokyo",
+      "Australia/Sydney",
+    ];
 
     if (
       !body.userId ||
       !validEmailFrequencies.includes(body.emailAlertFrequency) ||
       !validAlertTypes.includes(body.defaultAlertType) ||
-      !validHistoryRanges.includes(body.defaultHistoryRange)
+      !validHistoryRanges.includes(body.defaultHistoryRange) ||
+      !validDisplayTimeZones.includes(body.displayTimeZone)
     ) {
       return NextResponse.json(
         { error: "Missing or invalid settings information" },
@@ -108,6 +141,7 @@ export async function PATCH(request: Request) {
           email_alert_frequency: body.emailAlertFrequency,
           default_alert_type: body.defaultAlertType,
           default_history_range: body.defaultHistoryRange,
+          display_time_zone: body.displayTimeZone,
           hide_dlc: body.hideDlc,
           hide_soundtracks: body.hideSoundtracks,
           hide_demos: body.hideDemos,

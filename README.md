@@ -30,6 +30,7 @@ https://steam-sale-watcher.vercel.app/
 - Public Steam Specials discovery page for curated sale browsing
 - Daily discovery refresh using a capped Steam Specials list instead of scanning the full Steam catalog
 - Deal source badges, sorting, filtering, pagination, and tracked-count display
+- User-selectable display time zone for scheduled countdowns
 
 ## Tech Stack
 
@@ -108,6 +109,9 @@ The project uses three scheduled GitHub Actions workflows:
 - Daily digest emails only include alerts recorded after the user selects daily digest mode. Alerts that were already triggered before changing the setting may not be included unless the alert rule is updated or triggered again later.
 - The public discovery page uses a capped Steam Specials list and does not scan the full Steam catalog.
 - Steam Specials discovery refreshes once per day, so newly added Steam discounts may not appear immediately.
+- Pricing currently assumes the US Steam region and USD. Multi-currency and regional pricing support are planned future improvements.
+- The interface currently uses English only. Language/localization support is planned as a future improvement.
+- Display time zone settings affect countdown and estimated-time displays only. Scheduled jobs still run on fixed UTC GitHub Actions cron schedules.
 
 ## Future Improvements
 

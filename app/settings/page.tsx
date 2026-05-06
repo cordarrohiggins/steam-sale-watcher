@@ -7,11 +7,26 @@ import { supabase } from "@/lib/supabaseClient";
 type EmailAlertFrequency = "immediate" | "daily_digest" | "off";
 type DefaultAlertType = "target_price" | "target_discount";
 type DefaultHistoryRange = "1w" | "1m" | "3m" | "6m" | "1y" | "all";
+type DisplayTimeZone =
+  | "auto"
+  | "UTC"
+  | "America/New_York"
+  | "America/Chicago"
+  | "America/Denver"
+  | "America/Los_Angeles"
+  | "America/Phoenix"
+  | "America/Anchorage"
+  | "Pacific/Honolulu"
+  | "Europe/London"
+  | "Europe/Paris"
+  | "Asia/Tokyo"
+  | "Australia/Sydney";
 
 type UserSettings = {
   email_alert_frequency: EmailAlertFrequency;
   default_alert_type: DefaultAlertType;
   default_history_range: DefaultHistoryRange;
+  display_time_zone: DisplayTimeZone;
   hide_dlc: boolean;
   hide_soundtracks: boolean;
   hide_demos: boolean;
@@ -26,6 +41,7 @@ export default function SettingsPage() {
     email_alert_frequency: "immediate",
     default_alert_type: "target_price",
     default_history_range: "1m",
+    display_time_zone: "auto",
     hide_dlc: true,
     hide_soundtracks: true,
     hide_demos: true,
@@ -67,6 +83,7 @@ export default function SettingsPage() {
           email_alert_frequency: result.settings.email_alert_frequency,
           default_alert_type: result.settings.default_alert_type,
           default_history_range: result.settings.default_history_range,
+          display_time_zone: result.settings.display_time_zone ?? "auto",
           hide_dlc: result.settings.hide_dlc,
           hide_soundtracks: result.settings.hide_soundtracks,
           hide_demos: result.settings.hide_demos,
@@ -106,6 +123,7 @@ export default function SettingsPage() {
           emailAlertFrequency: settings.email_alert_frequency,
           defaultAlertType: settings.default_alert_type,
           defaultHistoryRange: settings.default_history_range,
+          displayTimeZone: settings.display_time_zone,
           hideDlc: settings.hide_dlc,
           hideSoundtracks: settings.hide_soundtracks,
           hideDemos: settings.hide_demos,
@@ -280,6 +298,35 @@ export default function SettingsPage() {
                     <option value="6m">6 months</option>
                     <option value="1y">1 year</option>
                     <option value="all">All time</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-300">
+                    Display time zone
+                  </label>
+                  <select
+                    value={settings.display_time_zone}
+                    onChange={(event) =>
+                      setSettings((current) => ({
+                        ...current,
+                        display_time_zone: event.target.value as DisplayTimeZone,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                  >
+                    <option value="auto">Auto-detect from browser</option>
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="America/Phoenix">Arizona Time (MST)</option>
+                    <option value="America/Anchorage">Alaska Time (AKT)</option>
+                    <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                    <option value="Europe/London">UK Time (GMT/BST)</option>
+                    <option value="Europe/Paris">Central European Time (CET/CEST)</option>
+                    <option value="Asia/Tokyo">Japan Time (JST)</option>
+                    <option value="Australia/Sydney">Australian Eastern Time (AET)</option>
                   </select>
                 </div>
               </div>

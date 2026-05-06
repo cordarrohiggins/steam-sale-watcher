@@ -45,6 +45,7 @@ export default function GameHistoryPage() {
   const params = useParams<{ gameId: string }>();
   const gameId = params.gameId;
   const [range, setRange] = useState<"1w" | "1m" | "3m" | "6m" | "1y" | "all">("1m");
+  const [displayTimeZone, setDisplayTimeZone] = useState("auto");
   const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
@@ -89,8 +90,14 @@ export default function GameHistoryPage() {
         const response = await fetch(`/api/settings?userId=${userId}`);
         const result = await response.json();
 
-        if (response.ok && result.settings?.default_history_range) {
-          setRange(result.settings.default_history_range);
+        if (response.ok && result.settings) {
+          if (result.settings.default_history_range) {
+            setRange(result.settings.default_history_range);
+          }
+
+          if (result.settings.display_time_zone) {
+            setDisplayTimeZone(result.settings.display_time_zone);
+          }
         }
       } finally {
         setHasLoadedSettings(true);
@@ -223,7 +230,7 @@ export default function GameHistoryPage() {
           </p>
 
           <div className="mt-5">
-            <CheckCountdown type="daily-history" />
+            <CheckCountdown type="daily-history" displayTimeZone={displayTimeZone} />
           </div>
 
           {isLoading && (

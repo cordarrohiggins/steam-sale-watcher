@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import CheckCountdown from "@/components/CheckCountdown";
+import { supabase } from "@/lib/supabaseClient";
 
 type Deal = {
   id: string;
@@ -51,8 +52,29 @@ export default function DealsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("discount");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilterOption>("all");
+  const [displayTimeZone, setDisplayTimeZone] = useState("auto");
   const [itemsPerPage, setItemsPerPage] = useState<"10" | "20" | "50" | "all">("20");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    async function loadDisplayTimeZone() {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user.id;
+
+      if (!userId) {
+        return;
+      }
+
+      const response = await fetch(`/api/settings?userId=${userId}`);
+      const result = await response.json();
+
+      if (response.ok && result.settings?.display_time_zone) {
+        setDisplayTimeZone(result.settings.display_time_zone);
+      }
+    }
+
+    loadDisplayTimeZone();
+  }, []);
 
   useEffect(() => {
     async function loadDeals() {
@@ -189,7 +211,7 @@ export default function DealsPage() {
               the entire Steam catalog.
             </p>
             <div className="mt-5 max-w-xl">
-              <CheckCountdown type="daily-discovery" />
+              <CheckCountdown type="daily-discovery" displayTimeZone={displayTimeZone} />
             </div>
           </div>
 

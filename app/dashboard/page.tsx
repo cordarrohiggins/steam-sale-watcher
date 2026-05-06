@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [defaultAlertType, setDefaultAlertType] = useState<
     "target_price" | "target_discount"
   >("target_price");
+  const [displayTimeZone, setDisplayTimeZone] = useState("auto");
 
   const [userId, setUserId] = useState<string | null>(null);
   const [addAlertTypes, setAddAlertTypes] = useState<
@@ -91,6 +92,7 @@ export default function DashboardPage() {
           setHideDemos(settingsData.settings.hide_demos);
           setHideExtras(settingsData.settings.hide_extras);
           setDefaultAlertType(settingsData.settings.default_alert_type);
+          setDisplayTimeZone(settingsData.settings.display_time_zone ?? "auto");
         }
       }
       setIsCheckingSession(false);
@@ -414,7 +416,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-8">
-          <CheckCountdown type="two-hour-check" />
+          <CheckCountdown type="two-hour-check" displayTimeZone={displayTimeZone} />
         </div>
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
