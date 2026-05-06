@@ -27,8 +27,10 @@ type WatchlistItem = {
     id: string;
     steam_app_id: number;
     name: string;
+    header_image: string | null;
     store_url: string | null;
     current_price: number | null;
+    original_price: number | null;
     discount_percent: number | null;
     currency: string | null;
     is_free: boolean | null;
@@ -903,20 +905,40 @@ export default function DashboardPage() {
                     ? "border-green-700 bg-green-950/20 shadow-lg shadow-green-950/30"
                     : "border-slate-800 bg-slate-950"
                 }`}
-              >
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
+              > 
+              <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="flex flex-col gap-3">
+                      <Image
+                        src={
+                          item.games.header_image ??
+                          `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.games.steam_app_id}/header.jpg`
+                        }
+                        alt={`${item.games.name} header image`}
+                        width={460}
+                        height={215}
+                        className="h-28 w-full rounded-xl border border-slate-800 object-cover sm:w-52"
+                      />
+
+                      <div className="flex flex-wrap gap-2">
+                        {item.alert_triggered && (
+                          <span className="rounded-full border border-green-700 bg-green-950 px-3 py-1 text-xs font-semibold text-green-200">
+                            Deal Alert Triggered
+                          </span>
+                        )}
+
+                        {(item.games.discount_percent ?? 0) > 0 && (
+                          <span className="rounded-full border border-purple-800 bg-purple-950 px-3 py-1 text-xs font-semibold text-purple-200">
+                            {item.games.discount_percent}% off
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
                       <h3 className="font-semibold">{item.games.name}</h3>
 
-                      {item.alert_triggered && (
-                        <span className="rounded-full border border-green-700 bg-green-950 px-3 py-1 text-xs font-semibold text-green-200">
-                          Deal Alert Triggered
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-3">
-                      <div className="space-y-1">
+                      <div className="mt-3 space-y-1">
                         <p className="text-sm text-slate-400">
                           Alert type:{" "}
                           {item.alert_type === "target_price"
@@ -939,8 +961,61 @@ export default function DashboardPage() {
                               : `${item.target_discount_percent}%`}
                           </p>
                         )}
-                      </div>
 
+                        <p className="text-sm text-slate-400">
+                          Current price:{" "}
+                          {item.games.is_free
+                            ? "Free"
+                            : item.games.current_price === null
+                              ? "Not checked yet"
+                              : `$${Number(item.games.current_price).toFixed(2)}`}
+                        </p>
+
+                        {(item.games.discount_percent ?? 0) > 0 &&
+                          item.games.original_price !== null && (
+                            <p className="text-sm text-slate-400">
+                              Original price: ${Number(item.games.original_price).toFixed(2)}
+                            </p>
+                          )}
+
+                        <p className="text-sm text-slate-400">
+                          Alert status:{" "}
+                          {item.alert_triggered
+                            ? "Triggered"
+                            : item.alert_enabled
+                              ? "Watching"
+                              : "Disabled"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex w-full flex-col items-center gap-2 lg:ml-auto lg:w-auto lg:items-end">
+                    {item.games.store_url && (
+                      <a
+                        href={item.games.store_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-44 rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
+                      >
+                        View on Steam
+                      </a>
+                    )}
+
+                    <Link
+                      href={`/games/${item.games.id}`}
+                      className="w-44 rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
+                    >
+                      View history
+                    </Link>
+
+                    <button
+                      onClick={() => handleRemoveFromWatchlist(item.id)}
+                      className="w-44 rounded-xl border border-red-900 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-950"
+                    >
+                      Remove
+                    </button>
+                    <div className="mt-3 border-t border-slate-800 pt-3">
                       <div className="grid gap-2 sm:grid-cols-[180px_160px_auto] sm:items-center">
                         <select
                           value={editAlertTypes[item.id] ?? item.alert_type}
@@ -997,47 +1072,6 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-400">
-                      Current price:{" "}
-                      {item.games.current_price === null
-                        ? "Not checked yet"
-                        : `$${Number(item.games.current_price).toFixed(2)}`}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      Alert status:{" "}
-                      {item.alert_triggered
-                        ? "Triggered"
-                        : item.alert_enabled
-                          ? "Watching"
-                          : "Disabled"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    {item.games.store_url && (
-                      <a
-                        href={item.games.store_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
-                      >
-                        View on Steam
-                      </a>
-                    )}
-
-                    <Link
-                      href={`/games/${item.games.id}`}
-                      className="rounded-xl border border-slate-700 px-4 py-2 text-center text-sm font-semibold transition hover:bg-slate-900"
-                    >
-                      View history
-                    </Link>
-
-                    <button
-                      onClick={() => handleRemoveFromWatchlist(item.id)}
-                      className="rounded-xl border border-red-900 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-950"
-                    >
-                      Remove
-                    </button>
                   </div>
                 </div>
               </div>
