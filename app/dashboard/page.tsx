@@ -37,6 +37,23 @@ type WatchlistItem = {
   };
 };
 
+type WatchlistSortOption =
+  | "recently-added"
+  | "title"
+  | "lowest-price"
+  | "highest-price"
+  | "biggest-discount"
+  | "target-price"
+  | "alert-status";
+
+type WatchlistFilterOption =
+  | "all"
+  | "triggered"
+  | "watching"
+  | "target-price"
+  | "discount-percent"
+  | "on-sale";
+
 export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -65,6 +82,19 @@ export default function DashboardPage() {
   const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([]);
   const [isLoadingWatchlist, setIsLoadingWatchlist] = useState(false);
   const [watchlistError, setWatchlistError] = useState("");
+
+  const [watchlistSortBy, setWatchlistSortBy] =
+    useState<WatchlistSortOption>("recently-added");
+
+  const [watchlistFilterBy, setWatchlistFilterBy] =
+    useState<WatchlistFilterOption>("all");
+
+  const [watchlistItemsPerPage, setWatchlistItemsPerPage] = useState<
+    "10" | "20" | "50" | "all"
+  >("20");
+
+  const [watchlistCurrentPage, setWatchlistCurrentPage] = useState(1);
+
   const [editAlertTypes, setEditAlertTypes] = useState<
     Record<string, "target_price" | "target_discount">
   >({});
@@ -370,6 +400,103 @@ export default function DashboardPage() {
     }
   }
 
+  const visibleWatchlistItems = [...watchlistItems]
+    .filter((item) => {
+      if (watchlistFilterBy === "triggered") {
+        return item.alert_triggered;
+      }
+
+      if (watchlistFilterBy === "watching") {
+        return item.alert_enabled && !item.alert_triggered;
+      }
+
+      if (watchlistFilterBy === "target-price") {
+        return item.alert_type === "target_price";
+      }
+
+      if (watchlistFilterBy === "discount-percent") {
+        return item.alert_type === "target_discount";
+      }
+
+      if (watchlistFilterBy === "on-sale") {
+        return (item.games.discount_percent ?? 0) > 0 || item.games.is_free;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (watchlistSortBy === "title") {
+        return a.games.name.localeCompare(b.games.name);
+      }
+
+      if (watchlistSortBy === "lowest-price") {
+        const priceA = a.games.is_free ? 0 : a.games.current_price ?? Number.MAX_VALUE;
+        const priceB = b.games.is_free ? 0 : b.games.current_price ?? Number.MAX_VALUE;
+
+        return priceA - priceB;
+      }
+
+      if (watchlistSortBy === "highest-price") {
+        const priceA = a.games.is_free ? 0 : a.games.current_price ?? 0;
+        const priceB = b.games.is_free ? 0 : b.games.current_price ?? 0;
+
+        return priceB - priceA;
+      }
+
+      if (watchlistSortBy === "biggest-discount") {
+        return (b.games.discount_percent ?? 0) - (a.games.discount_percent ?? 0);
+      }
+
+      if (watchlistSortBy === "target-price") {
+        const targetA = a.target_price ?? Number.MAX_VALUE;
+        const targetB = b.target_price ?? Number.MAX_VALUE;
+
+        return targetA - targetB;
+      }
+
+      if (watchlistSortBy === "alert-status") {
+        return Number(b.alert_triggered) - Number(a.alert_triggered);
+      }
+
+      return 0;
+    });
+
+  const watchlistTotalPages =
+    watchlistItemsPerPage === "all"
+      ? 1
+      : Math.max(
+          1,
+          Math.ceil(visibleWatchlistItems.length / Number(watchlistItemsPerPage))
+        );
+
+  const safeWatchlistCurrentPage = Math.min(
+    watchlistCurrentPage,
+    watchlistTotalPages
+  );
+
+  const paginatedWatchlistItems =
+    watchlistItemsPerPage === "all"
+      ? visibleWatchlistItems
+      : visibleWatchlistItems.slice(
+          (safeWatchlistCurrentPage - 1) * Number(watchlistItemsPerPage),
+          safeWatchlistCurrentPage * Number(watchlistItemsPerPage)
+        );
+
+  const firstVisibleWatchlistNumber =
+    visibleWatchlistItems.length === 0
+      ? 0
+      : watchlistItemsPerPage === "all"
+        ? 1
+        : (safeWatchlistCurrentPage - 1) * Number(watchlistItemsPerPage) + 1;
+
+  const lastVisibleWatchlistNumber =
+    watchlistItemsPerPage === "all"
+      ? visibleWatchlistItems.length
+      : Math.min(
+          safeWatchlistCurrentPage * Number(watchlistItemsPerPage),
+          visibleWatchlistItems.length
+        );
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
@@ -602,6 +729,75 @@ export default function DashboardPage() {
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h2 className="text-xl font-semibold">Watchlist</h2>
+          {watchlistItems.length > 0 && (
+            <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-300">
+                    Sort by
+                  </label>
+                  <select
+                    value={watchlistSortBy}
+                    onChange={(event) => {
+                      setWatchlistSortBy(event.target.value as WatchlistSortOption);
+                      setWatchlistCurrentPage(1);
+                    }}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                  >
+                    <option value="recently-added">Recently added</option>
+                    <option value="title">Game title</option>
+                    <option value="lowest-price">Lowest current price</option>
+                    <option value="highest-price">Highest current price</option>
+                    <option value="biggest-discount">Biggest discount</option>
+                    <option value="target-price">Target price</option>
+                    <option value="alert-status">Alert status</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-300">
+                    Filter
+                  </label>
+                  <select
+                    value={watchlistFilterBy}
+                    onChange={(event) => {
+                      setWatchlistFilterBy(event.target.value as WatchlistFilterOption);
+                      setWatchlistCurrentPage(1);
+                    }}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                  >
+                    <option value="all">All watched games</option>
+                    <option value="triggered">Triggered alerts only</option>
+                    <option value="watching">Watching only</option>
+                    <option value="target-price">Target price alerts</option>
+                    <option value="discount-percent">Discount percent alerts</option>
+                    <option value="on-sale">On sale only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-300">
+                    Games per page
+                  </label>
+                  <select
+                    value={watchlistItemsPerPage}
+                    onChange={(event) => {
+                      setWatchlistItemsPerPage(
+                        event.target.value as "10" | "20" | "50" | "all"
+                      );
+                      setWatchlistCurrentPage(1);
+                    }}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
+                  >
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="all">All</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
             
           {addStatusMessage && (
           <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-green-800 bg-green-950/50 p-3 text-sm text-green-200">
@@ -647,8 +843,59 @@ export default function DashboardPage() {
             <p className="mt-2 text-slate-400">No games are being watched yet.</p>
           )}
 
+          {!isLoadingWatchlist &&
+            watchlistItems.length > 0 &&
+            visibleWatchlistItems.length === 0 && (
+              <p className="mt-5 text-sm text-slate-400">
+                No watched games match the current filter.
+              </p>
+            )}
+
+          {!isLoadingWatchlist && visibleWatchlistItems.length > 0 && (
+            <div className="mt-5 flex flex-col justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4 sm:flex-row sm:items-center">
+              <p className="text-sm text-slate-400">
+                Showing {firstVisibleWatchlistNumber}-{lastVisibleWatchlistNumber} of{" "}
+                {visibleWatchlistItems.length} watched game
+                {visibleWatchlistItems.length === 1 ? "" : "s"}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={safeWatchlistCurrentPage <= 1 || watchlistItemsPerPage === "all"}
+                  onClick={() =>
+                    setWatchlistCurrentPage((current) => Math.max(1, current - 1))
+                  }
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <span className="text-sm text-slate-400">
+                  Page {safeWatchlistCurrentPage} of {watchlistTotalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={
+                    safeWatchlistCurrentPage >= watchlistTotalPages ||
+                    watchlistItemsPerPage === "all"
+                  }
+                  onClick={() =>
+                    setWatchlistCurrentPage((current) =>
+                      Math.min(watchlistTotalPages, current + 1)
+                    )
+                  }
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-5 space-y-3">
-            {watchlistItems.map((item) => (
+            {paginatedWatchlistItems.map((item) => (
               <div
                 key={item.id}
                 className={`rounded-xl border p-4 ${
@@ -796,6 +1043,48 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+          {!isLoadingWatchlist && visibleWatchlistItems.length > 0 && (
+            <div className="mt-5 flex flex-col justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4 sm:flex-row sm:items-center">
+              <p className="text-sm text-slate-400">
+                Showing {firstVisibleWatchlistNumber}-{lastVisibleWatchlistNumber} of{" "}
+                {visibleWatchlistItems.length} watched game
+                {visibleWatchlistItems.length === 1 ? "" : "s"}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={safeWatchlistCurrentPage <= 1 || watchlistItemsPerPage === "all"}
+                  onClick={() =>
+                    setWatchlistCurrentPage((current) => Math.max(1, current - 1))
+                  }
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <span className="text-sm text-slate-400">
+                  Page {safeWatchlistCurrentPage} of {watchlistTotalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={
+                    safeWatchlistCurrentPage >= watchlistTotalPages ||
+                    watchlistItemsPerPage === "all"
+                  }
+                  onClick={() =>
+                    setWatchlistCurrentPage((current) =>
+                      Math.min(watchlistTotalPages, current + 1)
+                    )
+                  }
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </main>
