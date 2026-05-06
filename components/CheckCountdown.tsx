@@ -2,80 +2,129 @@
 
 import { useEffect, useState } from "react";
 
-type CountdownType = "two-hour-check" | "daily-history" | "daily-discovery";
+type CountdownType =
+  | "price-check"
+  | "two-hour-check"
+  | "daily-history"
+  | "daily-discovery"
+  | "daily-digest";
 
 type CheckCountdownProps = {
   type: CountdownType;
   displayTimeZone?: string;
 };
 
-function getNextTwoHourCheck(now: Date) {
+function getNextTwoHourPriceCheck(now: Date) {
   const next = new Date(now);
 
-  next.setUTCMinutes(15, 0, 0);
+  next.setUTCSeconds(0, 0);
 
-  while (next <= now || next.getUTCHours() % 2 !== 0) {
-    next.setUTCHours(next.getUTCHours() + 1);
-    next.setUTCMinutes(15, 0, 0);
+  while (
+    next <= now ||
+    next.getUTCMinutes() !== 15 ||
+    next.getUTCHours() % 2 !== 0
+  ) {
+    next.setUTCMinutes(next.getUTCMinutes() + 1);
   }
 
   return next;
 }
 
-function getNextDailyHistoryCheck(now: Date) {
-  const easternFormatter = new Intl.DateTimeFormat("en-US", {
+function getEasternDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+  }).formatToParts(date);
 
-  const parts = easternFormatter.formatToParts(now);
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value),
+    month: Number(parts.find((part) => part.type === "month")?.value),
+    day: Number(parts.find((part) => part.type === "day")?.value),
+  };
+}
 
-  const getPart = (type: string) =>
-    Number(parts.find((part) => part.type === type)?.value);
-
-  const easternYear = getPart("year");
-  const easternMonth = getPart("month");
-  const easternDay = getPart("day");
-  const easternHour = getPart("hour");
-  const easternMinute = getPart("minute");
-
-  const hasPassedToday =
-    easternHour > 20 || (easternHour === 20 && easternMinute >= 20);
-
-  const targetDay = easternDay + (hasPassedToday ? 1 : 0);
-
-  const targetEasternDate = new Date(
-    Date.UTC(easternYear, easternMonth - 1, targetDay, 20, 20, 0)
-  );
-
-  const offsetFormatter = new Intl.DateTimeFormat("en-US", {
+function getEasternOffsetHours(date: Date) {
+  const offsetName = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     timeZoneName: "shortOffset",
-  });
-
-  const offsetPart = offsetFormatter
-    .formatToParts(targetEasternDate)
+  })
+    .formatToParts(date)
     .find((part) => part.type === "timeZoneName")?.value;
 
-  const match = offsetPart?.match(/GMT([+-]\d{1,2})/);
-  const offsetHours = match ? Number(match[1]) : -4;
+  const offsetMatch = offsetName?.match(/GMT([+-]\d+)/);
+
+  return offsetMatch ? Number(offsetMatch[1]) : -5;
+}
+
+function getUtcDateForEasternTime({
+  year,
+  month,
+  day,
+  hour,
+  minute,
+}: {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}) {
+  const noonUtcForEasternDate = new Date(
+    Date.UTC(year, month - 1, day, 12, 0, 0)
+  );
+
+  const easternOffsetHours = getEasternOffsetHours(noonUtcForEasternDate);
 
   return new Date(
     Date.UTC(
-      easternYear,
-      easternMonth - 1,
-      targetDay,
-      20 - offsetHours,
-      20,
+      year,
+      month - 1,
+      day,
+      hour - easternOffsetHours,
+      minute,
+      0,
       0
     )
   );
+}
+
+function getNextDailyEasternTime(
+  now: Date,
+  easternHour: number,
+  easternMinute: number
+) {
+  const easternToday = getEasternDateParts(now);
+
+  const todayTarget = getUtcDateForEasternTime({
+    ...easternToday,
+    hour: easternHour,
+    minute: easternMinute,
+  });
+
+  if (todayTarget > now) {
+    return todayTarget;
+  }
+
+  const easternTomorrowNoonUtc = new Date(
+    Date.UTC(
+      easternToday.year,
+      easternToday.month - 1,
+      easternToday.day + 1,
+      12,
+      0,
+      0
+    )
+  );
+
+  const easternTomorrow = getEasternDateParts(easternTomorrowNoonUtc);
+
+  return getUtcDateForEasternTime({
+    ...easternTomorrow,
+    hour: easternHour,
+    minute: easternMinute,
+  });
 }
 
 function getResolvedTimeZone(displayTimeZone?: string) {
@@ -103,11 +152,52 @@ function formatEstimatedTime(date: Date, displayTimeZone?: string) {
 function formatTimeRemaining(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
 
-  const hours = Math.floor(totalSeconds / 3600);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }
+
   return `${hours}h ${minutes}m ${seconds}s`;
+}
+
+function getCountdownDetails(type: CountdownType, now: Date) {
+  if (type === "price-check" || type === "two-hour-check") {
+    return {
+      nextCheck: getNextTwoHourPriceCheck(now),
+      title: "Next scheduled price check",
+      description:
+        "Scheduled price checks run every 2 hours at the 15-minute mark and power alerts, prices, and deal updates. GitHub Actions may start a few minutes late.",
+    };
+  }
+
+  if (type === "daily-discovery") {
+    return {
+      nextCheck: getNextDailyEasternTime(now, 20, 40),
+      title: "Next discovery deals refresh",
+      description:
+        "Discovery deals refresh once per day at 8:40 PM Eastern from Steam Specials and only show games currently on sale. GitHub Actions may start a few minutes late.",
+    };
+  }
+
+  if (type === "daily-history") {
+    return {
+      nextCheck: getNextDailyEasternTime(now, 20, 45),
+      title: "Next daily history point",
+      description:
+        "Price history saves one shared point per tracked game after the 8:45 PM Eastern scheduled price check. GitHub Actions may start a few minutes late.",
+    };
+  }
+
+  return {
+    nextCheck: getNextDailyEasternTime(now, 20, 50),
+    title: "Next daily digest email",
+    description:
+      "Daily digest emails are scheduled once per day at 8:50 PM Eastern for users who selected daily digest alerts. GitHub Actions may start a few minutes late.",
+  };
 }
 
 export default function CheckCountdown({
@@ -117,52 +207,23 @@ export default function CheckCountdown({
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const tick = () => {
+    const intervalId = window.setInterval(() => {
       setNow(new Date());
-    };
-
-    tick();
-
-    const intervalId = window.setInterval(tick, 1000);
+    }, 1000);
 
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const title =
-    type === "daily-history"
-      ? "Next daily history point"
-      : type === "daily-discovery"
-        ? "Next discovery deals refresh"
-        : "Next scheduled price check";
-
-  const description =
-    type === "daily-history"
-      ? "Daily digest runs once per day around 8:20 PM Eastern. GitHub Actions may start a few minutes late."
-      : type === "daily-discovery"
-        ? "Discovery deals refresh once per day around 8:20 PM Eastern from Steam Specials and only show games currently on sale."
-        : "Scheduled price checks run every 2 hours around minute 15 and power alerts, prices, and deal updates.";
-
   if (!now) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-        <p className="text-sm text-slate-400">{title}</p>
-
-        <p className="mt-1 text-2xl font-semibold">Loading...</p>
-
-        <p className="mt-2 text-sm text-slate-400">
-          Estimated time: calculating...
-        </p>
-
-        <p className="mt-2 text-xs text-slate-500">{description}</p>
+        <p className="text-sm text-slate-400">Loading schedule...</p>
+        <p className="mt-1 text-2xl font-semibold">--</p>
       </div>
     );
   }
 
-  const nextCheck =
-    type === "daily-history" || type === "daily-discovery"
-      ? getNextDailyHistoryCheck(now)
-      : getNextTwoHourCheck(now);
-
+  const { nextCheck, title, description } = getCountdownDetails(type, now);
   const timeRemaining = nextCheck.getTime() - now.getTime();
 
   return (

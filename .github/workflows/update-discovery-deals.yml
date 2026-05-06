@@ -2,13 +2,9 @@ name: Update Discovery Deals
 
 on:
   schedule:
-    - cron: "20 20 * * *"
-      timezone: "America/New_York"
+    - cron: "40 0 * * *"
+    - cron: "40 1 * * *"
   workflow_dispatch:
-  
-concurrency:
-  group: send-daily-digest
-  cancel-in-progress: false
 
 jobs:
   update-discovery-deals:
@@ -17,5 +13,14 @@ jobs:
     steps:
       - name: Call discovery deals endpoint
         run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            CURRENT_EASTERN_TIME=$(TZ=America/New_York date +%H:%M)
+
+            if [ "$CURRENT_EASTERN_TIME" != "20:40" ]; then
+              echo "Skipping because it is $CURRENT_EASTERN_TIME Eastern, not 20:40 Eastern."
+              exit 0
+            fi
+          fi
+
           curl --fail -X GET "${{ secrets.APP_URL }}/api/jobs/update-discovery-deals" \
             -H "Authorization: Bearer ${{ secrets.CHECK_PRICES_SECRET }}"
