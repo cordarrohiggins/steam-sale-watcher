@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -21,13 +21,33 @@ function isCurrentPage(pathname: string, href: string) {
 
 export default function AppNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const visibleLinks = navLinks.filter(
     (link) => !isCurrentPage(pathname, link.href)
   );
 
+  function handleGoBack() {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/");
+  }
+
   return (
     <nav className="flex flex-wrap items-center gap-5">
+      {pathname !== "/" && (
+        <button
+          type="button"
+          onClick={handleGoBack}
+          className="text-sm text-slate-400 transition hover:text-white"
+        >
+          Go back
+        </button>
+      )}
+
       {visibleLinks.map((link) => (
         <Link
           key={link.href}
