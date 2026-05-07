@@ -53,6 +53,8 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     async function loadSessionAndSettings() {
@@ -145,6 +147,42 @@ export default function SettingsPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleUpdatePassword() {
+    setStatusMessage("");
+    setErrorMessage("");
+
+    if (!userId) {
+      setErrorMessage("Please log in before changing your password.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setNewPassword("");
+      setStatusMessage("Password updated.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to update password"
+      );
+    } finally {
+      setIsUpdatingPassword(false);
     }
   }
 
@@ -241,6 +279,37 @@ export default function SettingsPage() {
                 <option value="daily_digest">Daily digest email</option>
                 <option value="off">No email alerts</option>
               </select>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h2 className="text-xl font-semibold">Password</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Change the password for your Steam Sale Watcher account.
+              </p>
+
+              <div className="mt-5">
+                <label className="text-sm font-medium text-slate-300">
+                  New password
+                </label>
+
+                <input
+                  type="password"
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="At least 6 characters"
+                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-slate-400"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleUpdatePassword}
+                disabled={isUpdatingPassword}
+                className="mt-5 rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isUpdatingPassword ? "Updating password..." : "Update password"}
+              </button>
             </div>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">

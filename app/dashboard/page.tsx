@@ -158,8 +158,15 @@ export default function DashboardPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+
     setUserEmail(null);
     setUserId(null);
+    setWatchlistItems([]);
+    setSearchResults([]);
+    setSearchQuery("");
+    setAddStatusMessage("");
+    setAddErrorMessage("");
+    setWatchlistError("");
   }
 
   const searchSteamGames = useCallback(async function searchSteamGames(query: string) {
