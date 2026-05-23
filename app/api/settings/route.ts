@@ -22,6 +22,7 @@ type UserSettingsRequest = {
   defaultAlertType: "target_price" | "target_discount";
   defaultHistoryRange: "1w" | "1m" | "3m" | "6m" | "1y" | "all";
   displayTimeZone: DisplayTimeZone;
+  freeGameEmailAlerts: boolean;
   hideDlc: boolean;
   hideSoundtracks: boolean;
   hideDemos: boolean;
@@ -33,6 +34,7 @@ const defaultSettings = {
   default_alert_type: "target_price",
   default_history_range: "1m",
   display_time_zone: "auto",
+  free_game_email_alerts: false,
   hide_dlc: true,
   hide_soundtracks: true,
   hide_demos: true,
@@ -142,6 +144,7 @@ export async function PATCH(request: Request) {
           default_alert_type: body.defaultAlertType,
           default_history_range: body.defaultHistoryRange,
           display_time_zone: body.displayTimeZone,
+          free_game_email_alerts: body.freeGameEmailAlerts,
           hide_dlc: body.hideDlc,
           hide_soundtracks: body.hideSoundtracks,
           hide_demos: body.hideDemos,

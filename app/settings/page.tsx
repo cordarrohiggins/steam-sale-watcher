@@ -28,6 +28,7 @@ type UserSettings = {
   default_alert_type: DefaultAlertType;
   default_history_range: DefaultHistoryRange;
   display_time_zone: DisplayTimeZone;
+  free_game_email_alerts: boolean;
   hide_dlc: boolean;
   hide_soundtracks: boolean;
   hide_demos: boolean;
@@ -43,6 +44,7 @@ export default function SettingsPage() {
     default_alert_type: "target_price",
     default_history_range: "1m",
     display_time_zone: "auto",
+    free_game_email_alerts: false,
     hide_dlc: true,
     hide_soundtracks: true,
     hide_demos: true,
@@ -87,6 +89,7 @@ export default function SettingsPage() {
           default_alert_type: result.settings.default_alert_type,
           default_history_range: result.settings.default_history_range,
           display_time_zone: result.settings.display_time_zone ?? "auto",
+          free_game_email_alerts: result.settings.free_game_email_alerts ?? false,
           hide_dlc: result.settings.hide_dlc,
           hide_soundtracks: result.settings.hide_soundtracks,
           hide_demos: result.settings.hide_demos,
@@ -127,6 +130,7 @@ export default function SettingsPage() {
           defaultAlertType: settings.default_alert_type,
           defaultHistoryRange: settings.default_history_range,
           displayTimeZone: settings.display_time_zone,
+          freeGameEmailAlerts: settings.free_game_email_alerts,
           hideDlc: settings.hide_dlc,
           hideSoundtracks: settings.hide_soundtracks,
           hideDemos: settings.hide_demos,
@@ -279,6 +283,34 @@ export default function SettingsPage() {
                 <option value="daily_digest">Daily digest email</option>
                 <option value="off">No email alerts</option>
               </select>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h2 className="text-xl font-semibold">Free-to-keep game alerts</h2>
+
+              <p className="mt-2 text-sm text-slate-400">
+                Get an email when Steam Sale Watcher finds a normally paid Steam game that
+                is temporarily free to keep. This uses curated deal sources and Steam
+                verification, not a full scan of the Steam catalog.
+              </p>
+
+              <label className="mt-5 flex items-start gap-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={settings.free_game_email_alerts}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      free_game_email_alerts: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4"
+                />
+
+                <span>
+                  Email me when a paid Steam game is detected as temporarily free to keep.
+                </span>
+              </label>
             </div>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
