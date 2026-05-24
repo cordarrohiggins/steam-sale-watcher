@@ -56,6 +56,7 @@ export default function SettingsPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
@@ -64,6 +65,13 @@ export default function SettingsPage() {
       setErrorMessage("");
 
       const { data } = await supabase.auth.getSession();
+      if (
+        data.session &&
+        sessionStorage.getItem("password_reset_required") === "true"
+      ) {
+        window.location.href = "/reset-password";
+        return;
+      }
       const sessionUser = data.session?.user;
 
       if (!sessionUser) {
@@ -324,14 +332,24 @@ export default function SettingsPage() {
                   New password
                 </label>
 
-                <input
-                  type="password"
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="At least 6 characters"
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-slate-400"
-                />
+                <div className="relative mt-2">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 pr-20 text-white outline-none transition placeholder:text-slate-500 focus:border-slate-400"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-white transition hover:text-slate-300"
+                  >
+                    {showNewPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
 
               <button
