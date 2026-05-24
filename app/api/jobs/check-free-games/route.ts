@@ -38,6 +38,14 @@ type UserSettingRow = {
   user_id: string;
 };
 
+type FreeGameEmailItem = {
+  freeToKeepGameId: string;
+  gameId: string;
+  gameName: string;
+  originalPrice: number | null;
+  storeUrl: string | null;
+};
+
 const blockedNameTerms = [
   "soundtrack",
   "official soundtrack",
@@ -188,6 +196,8 @@ export async function GET(request: Request) {
     let savedFreeGameCount = 0;
     let emailCount = 0;
 
+    const newFreeGames: FreeGameEmailItem[] = [];
+
     const activeSteamAppIds = new Set<number>();
 
     for (const candidate of candidates) {
@@ -305,78 +315,97 @@ export async function GET(request: Request) {
 
         savedFreeGameCount += 1;
 
-        const { data: subscribedUsers, error: subscribedUsersError } =
-          await supabaseServer
-            .from("user_settings")
-            .select("user_id")
-            .eq("free_game_email_alerts", true);
+        newFreeGames.push({
+          freeToKeepGameId: freeGame.id,
+          gameId: game.id,
+          gameName: priceData.name,
+          originalPrice:
+            priceData.originalPrice && priceData.originalPrice > 0
+              ? priceData.originalPrice
+              : candidate.itadRegularPrice,
+          storeUrl: priceData.storeUrl,
+        });
+      } catch (error) {
+        console.error(
+          `Failed free-to-keep check for ${candidate.steamAppId}`,
+          error
+        );
+      }
+    }
 
-        if (subscribedUsersError) {
-          throw new Error(subscribedUsersError.message);
-        }
+    if (newFreeGames.length > 0) {
+      const { data: subscribedUsers, error: subscribedUsersError } =
+        await supabaseServer
+          .from("user_settings")
+          .select("user_id")
+          .eq("free_game_email_alerts", true);
 
-        for (const subscribedUser of
-          (subscribedUsers ?? []) as UserSettingRow[]) {
+      if (subscribedUsersError) {
+        throw new Error(subscribedUsersError.message);
+      }
+
+      for (const subscribedUser of (subscribedUsers ?? []) as UserSettingRow[]) {
+        const unsentGamesForUser: FreeGameEmailItem[] = [];
+
+        for (const freeGame of newFreeGames) {
           const { data: existingAlert, error: existingAlertError } =
             await supabaseServer
               .from("free_game_alerts_sent")
               .select("id")
               .eq("user_id", subscribedUser.user_id)
-              .eq("free_to_keep_game_id", freeGame.id)
+              .eq("free_to_keep_game_id", freeGame.freeToKeepGameId)
               .maybeSingle();
 
           if (existingAlertError) {
             throw new Error(existingAlertError.message);
           }
 
-          if (existingAlert) {
-            continue;
+          if (!existingAlert) {
+            unsentGamesForUser.push(freeGame);
           }
-
-          const { data: userData, error: userError } =
-            await supabaseServer.auth.admin.getUserById(
-              subscribedUser.user_id
-            );
-
-          if (userError) {
-            throw new Error(userError.message);
-          }
-
-          const userEmail = userData.user?.email;
-
-          if (!userEmail) {
-            continue;
-          }
-
-          await sendFreeGameAlertEmail({
-            to: userEmail,
-            gameName: priceData.name,
-            originalPrice:
-                priceData.originalPrice && priceData.originalPrice > 0
-                    ? priceData.originalPrice
-                    : candidate.itadRegularPrice,
-            storeUrl: priceData.storeUrl,
-          });
-
-          const { error: insertAlertError } = await supabaseServer
-            .from("free_game_alerts_sent")
-            .insert({
-              user_id: subscribedUser.user_id,
-              game_id: game.id,
-              free_to_keep_game_id: freeGame.id,
-            });
-
-          if (insertAlertError) {
-            throw new Error(insertAlertError.message);
-          }
-
-          emailCount += 1;
         }
-      } catch (error) {
-        console.error(
-          `Failed free-to-keep check for ${candidate.steamAppId}`,
-          error
-        );
+
+        if (unsentGamesForUser.length === 0) {
+          continue;
+        }
+
+        const { data: userData, error: userError } =
+          await supabaseServer.auth.admin.getUserById(subscribedUser.user_id);
+
+        if (userError) {
+          throw new Error(userError.message);
+        }
+
+        const userEmail = userData.user?.email;
+
+        if (!userEmail) {
+          continue;
+        }
+
+        await sendFreeGameAlertEmail({
+          to: userEmail,
+          games: unsentGamesForUser.map((game) => ({
+            gameName: game.gameName,
+            originalPrice: game.originalPrice,
+            storeUrl: game.storeUrl,
+          })),
+        });
+
+        const { error: insertAlertsError } = await supabaseServer
+          .from("free_game_alerts_sent")
+          .insert(
+            unsentGamesForUser.map((game) => ({
+              user_id: subscribedUser.user_id,
+              game_id: game.gameId,
+              free_to_keep_game_id: game.freeToKeepGameId,
+            }))
+          );
+
+        if (insertAlertsError) {
+          throw new Error(insertAlertsError.message);
+        }
+
+        emailCount += 1;
       }
     }
 

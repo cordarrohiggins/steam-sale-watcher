@@ -7,7 +7,8 @@ type CountdownType =
   | "two-hour-check"
   | "daily-history"
   | "daily-discovery"
-  | "daily-digest";
+  | "daily-digest"
+  | "daily-free-games";
 
 type CheckCountdownProps = {
   type: CountdownType;

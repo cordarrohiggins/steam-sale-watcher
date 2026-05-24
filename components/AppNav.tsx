@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/deals", label: "Browse deals" },
+  { href: "/free-games", label: "Free games" },
   { href: "/about", label: "About" },
   { href: "/settings", label: "Settings" },
 ];

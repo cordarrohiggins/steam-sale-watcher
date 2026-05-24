@@ -67,6 +67,13 @@ export default function Home() {
             Browse Deals
           </Link>
 
+          <Link
+            href="/free-games"
+            className="rounded-xl border border-slate-700 px-6 py-3 font-semibold text-white transition hover:bg-slate-900"
+          >
+            Free-to-Keep Games
+          </Link>
+
           {userEmail ? (
             <button
               type="button"

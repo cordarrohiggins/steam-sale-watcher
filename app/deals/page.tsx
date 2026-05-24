@@ -37,7 +37,6 @@ type SortOption =
 
 type FilterOption =
   | "all"
-  | "free"
   | "under-5"
   | "under-10"
   | "50-off"
@@ -113,10 +112,6 @@ export default function DealsPage() {
 
       if (sourceFilter === "specials" && !deal.discovery_sources.includes("specials")) {
         return false;
-      }
-
-      if (filterBy === "free") {
-        return deal.is_free === true || price === 0;
       }
 
       if (filterBy === "under-5") {
@@ -250,7 +245,6 @@ export default function DealsPage() {
                 className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
               >
                 <option value="all">All deals</option>
-                <option value="free">Free only</option>
                 <option value="under-5">Under $5</option>
                 <option value="under-10">Under $10</option>
                 <option value="50-off">50% off or more</option>

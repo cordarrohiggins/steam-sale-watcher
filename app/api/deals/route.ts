@@ -48,7 +48,8 @@ export async function GET() {
       `
       )
       .not("current_price", "is", null)
-      .or("discount_percent.gt.0,is_free.eq.true")
+      .gt("current_price", 0)
+      .gt("discount_percent", 0)
       .order("discount_percent", { ascending: false });
 
     if (gamesError) {

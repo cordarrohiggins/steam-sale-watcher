@@ -8,44 +8,65 @@ if (!resendApiKey) {
 
 const resend = new Resend(resendApiKey);
 
-type SendFreeGameAlertEmailParams = {
-  to: string;
+type FreeGameEmailItem = {
   gameName: string;
   originalPrice: number | null;
   storeUrl: string | null;
 };
 
+type SendFreeGameAlertEmailParams = {
+  to: string;
+  games: FreeGameEmailItem[];
+};
+
 export async function sendFreeGameAlertEmail({
   to,
-  gameName,
-  originalPrice,
-  storeUrl,
+  games,
 }: SendFreeGameAlertEmailParams) {
-  const originalPriceText =
-    originalPrice === null ? "a paid price" : `$${originalPrice.toFixed(2)}`;
+  const subject =
+    games.length === 1
+      ? `${games[0].gameName} is free to keep on Steam`
+      : `${games.length} Steam games are free to keep`;
+
+  const gameListHtml = games
+    .map((game) => {
+      const originalPriceText =
+        game.originalPrice === null
+          ? "Normally paid"
+          : `$${game.originalPrice.toFixed(2)}`;
+
+      return `
+        <li style="margin-bottom: 18px;">
+          <strong>${game.gameName}</strong><br />
+          Original price: ${originalPriceText}<br />
+          Current price: Free<br />
+          ${
+            game.storeUrl
+              ? `<a href="${game.storeUrl}">View on Steam</a>`
+              : ""
+          }
+        </li>
+      `;
+    })
+    .join("");
 
   const { data, error } = await resend.emails.send({
     from: "Steam Sale Watcher <onboarding@resend.dev>",
     to,
-    subject: `${gameName} is free to keep on Steam`,
+    subject,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h1>${gameName} is free to keep</h1>
+        <h1>Steam games free to keep</h1>
 
         <p>
-          Steam Sale Watcher found a normally paid Steam game that appears to be temporarily free to keep.
+          Steam Sale Watcher found the following normally paid Steam game${
+            games.length === 1 ? "" : "s"
+          } that appear to be temporarily free to keep.
         </p>
 
-        <p>
-          Original price: ${originalPriceText}<br />
-          Current price: Free
-        </p>
-
-        ${
-          storeUrl
-            ? `<p><a href="${storeUrl}">View it on Steam</a></p>`
-            : ""
-        }
+        <ul>
+          ${gameListHtml}
+        </ul>
 
         <p style="font-size: 13px; color: #555;">
           Free-to-keep detection uses curated deal sources and Steam verification. Promotions can change quickly.
