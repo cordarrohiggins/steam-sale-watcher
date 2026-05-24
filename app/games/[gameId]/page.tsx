@@ -10,6 +10,7 @@ import AppNav from "@/components/AppNav";
 
 import {
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -52,6 +53,8 @@ export default function GameHistoryPage() {
   const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [historyTablePage, setHistoryTablePage] = useState(1);
+  const historyRowsPerPage = 10;
 
     const chartData = [...priceHistory]
     .reverse()
@@ -152,6 +155,64 @@ export default function GameHistoryPage() {
     loadHistory();
   }, [gameId, range, hasLoadedSettings]);
 
+  const totalHistoryTablePages = Math.max(
+    1,
+    Math.ceil(priceHistory.length / historyRowsPerPage)
+  );
+
+  const safeHistoryTablePage = Math.min(
+    historyTablePage,
+    totalHistoryTablePages
+  );
+
+  const paginatedPriceHistory = priceHistory.slice(
+    (safeHistoryTablePage - 1) * historyRowsPerPage,
+    safeHistoryTablePage * historyRowsPerPage
+  );
+
+  const firstHistoryRowNumber =
+    priceHistory.length === 0
+      ? 0
+      : (safeHistoryTablePage - 1) * historyRowsPerPage + 1;
+
+  const lastHistoryRowNumber = Math.min(
+    safeHistoryTablePage * historyRowsPerPage,
+    priceHistory.length
+  );
+
+  function getHistoryPageButtons() {
+    const pages: Array<number | "..."> = [];
+
+    if (totalHistoryTablePages <= 5) {
+      for (let page = 1; page <= totalHistoryTablePages; page += 1) {
+        pages.push(page);
+      }
+
+      return pages;
+    }
+
+    pages.push(1);
+
+    if (safeHistoryTablePage > 3) {
+      pages.push("...");
+    }
+
+    const startPage = Math.max(2, safeHistoryTablePage - 1);
+    const endPage = Math.min(totalHistoryTablePages - 1, safeHistoryTablePage + 1);
+
+    for (let page = startPage; page <= endPage; page += 1) {
+      pages.push(page);
+    }
+
+    if (safeHistoryTablePage < totalHistoryTablePages - 2) {
+      pages.push("...");
+    }
+
+    pages.push(totalHistoryTablePages);
+
+    return pages;
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <section className="mx-auto max-w-5xl">
@@ -195,9 +256,10 @@ export default function GameHistoryPage() {
             <div className="flex flex-col gap-2 sm:items-end">
               <select
                 value={range}
-                onChange={(event) =>
-                  setRange(event.target.value as "1w" | "1m" | "3m" | "6m" | "1y" | "all")
-                }
+                onChange={(event) => {
+                  setRange(event.target.value as "1w" | "1m" | "3m" | "6m" | "1y" | "all");
+                  setHistoryTablePage(1);
+                }}
                 className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-slate-400"
               >
                 <option value="1w">1 week</option>
@@ -297,22 +359,68 @@ export default function GameHistoryPage() {
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
+                      <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                      <XAxis dataKey="date" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0f172a",
+                          border: "1px solid #334155",
+                          borderRadius: "12px",
+                          color: "#ffffff",
+                        }}
+                        labelStyle={{
+                          color: "#ffffff",
+                        }}
+                        formatter={(value, name) => {
+                          if (value === null || value === undefined) {
+                            return ["N/A", name];
+                          }
+
+                          return [`$${Number(value).toFixed(2)}`, name];
+                        }}
+                        labelFormatter={(label) => `Date: ${label}`}
+                      />
+                      <Legend />
+
                       <Line
                         type="monotone"
                         dataKey="price"
                         name="Current price"
-                        strokeWidth={2}
+                        stroke="#22c55e"
+                        strokeWidth={3}
+                        dot={{
+                          r: 4,
+                          fill: "#22c55e",
+                          stroke: "#22c55e",
+                        }}
+                        activeDot={{
+                          r: 7,
+                          fill: "#22c55e",
+                          stroke: "#ffffff",
+                          strokeWidth: 2,
+                        }}
                         connectNulls
                       />
+
                       <Line
                         type="monotone"
                         dataKey="originalPrice"
                         name="Original price"
+                        stroke="#60a5fa"
                         strokeWidth={2}
+                        strokeDasharray="6 6"
+                        dot={{
+                          r: 4,
+                          fill: "#60a5fa",
+                          stroke: "#60a5fa",
+                        }}
+                        activeDot={{
+                          r: 7,
+                          fill: "#60a5fa",
+                          stroke: "#ffffff",
+                          strokeWidth: 2,
+                        }}
                         connectNulls
                       />
                     </LineChart>
@@ -331,15 +439,46 @@ export default function GameHistoryPage() {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
+                      <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                      <XAxis dataKey="date" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0f172a",
+                          border: "1px solid #334155",
+                          borderRadius: "12px",
+                          color: "#ffffff",
+                        }}
+                        labelStyle={{
+                          color: "#ffffff",
+                        }}
+                        formatter={(value, name) => {
+                          if (value === null || value === undefined) {
+                            return ["N/A", name];
+                          }
+
+                          return [`${Number(value).toFixed(0)}%`, name];
+                        }}
+                        labelFormatter={(label) => `Date: ${label}`}
+                      />
+
                       <Line
                         type="monotone"
                         dataKey="discount"
                         name="Discount percent"
-                        strokeWidth={2}
+                        stroke="#a855f7"
+                        strokeWidth={3}
+                        dot={{
+                          r: 4,
+                          fill: "#a855f7",
+                          stroke: "#a855f7",
+                        }}
+                        activeDot={{
+                          r: 7,
+                          fill: "#a855f7",
+                          stroke: "#ffffff",
+                          strokeWidth: 2,
+                        }}
                         connectNulls
                       />
                     </LineChart>
@@ -359,7 +498,7 @@ export default function GameHistoryPage() {
                   </thead>
 
                   <tbody>
-                    {priceHistory.map((historyItem) => (
+                    {paginatedPriceHistory.map((historyItem) => (
                       <tr
                         key={historyItem.id}
                         className="border-b border-slate-900"
@@ -386,6 +525,64 @@ export default function GameHistoryPage() {
                     ))}
                   </tbody>
                 </table>
+                {priceHistory.length > historyRowsPerPage && (
+                  <div className="mt-5 flex flex-col justify-between gap-4 border-t border-slate-800 pt-5 sm:flex-row sm:items-center">
+                    <p className="text-sm text-slate-400">
+                      Showing {firstHistoryRowNumber}-{lastHistoryRowNumber} of{" "}
+                      {priceHistory.length} history points
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={safeHistoryTablePage <= 1}
+                        onClick={() =>
+                          setHistoryTablePage((current) => Math.max(1, current - 1))
+                        }
+                        className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+
+                      {getHistoryPageButtons().map((page, index) =>
+                        page === "..." ? (
+                          <span
+                            key={`ellipsis-${index}`}
+                            className="px-2 text-sm text-slate-500"
+                          >
+                            ...
+                          </span>
+                        ) : (
+                          <button
+                            key={page}
+                            type="button"
+                            onClick={() => setHistoryTablePage(page)}
+                            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                              page === safeHistoryTablePage
+                                ? "border-white bg-white text-slate-950"
+                                : "border-slate-700 text-white hover:bg-slate-800"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={safeHistoryTablePage >= totalHistoryTablePages}
+                        onClick={() =>
+                          setHistoryTablePage((current) =>
+                            Math.min(totalHistoryTablePages, current + 1)
+                          )
+                        }
+                        className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
