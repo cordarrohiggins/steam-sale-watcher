@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { fetchSteamPrice } from "@/lib/steam/fetchSteamPrice";
 import { sendFreeGameAlertEmail } from "@/lib/email/sendFreeGameAlertEmail";
+import { saveDailyPriceCheck } from "@/lib/priceHistory/saveDailyPriceCheck";
 
 type ItadDeal = {
   id: string;
@@ -292,40 +293,17 @@ export async function GET(request: Request) {
           lastConfirmedFreeAt: new Date().toISOString(),
         });
 
-        const startOfToday = new Date();
-        startOfToday.setUTCHours(0, 0, 0, 0);
-
-        const { data: existingPriceCheckToday, error: existingPriceCheckError } =
-          await supabaseServer
-            .from("price_checks")
-            .select("id")
-            .eq("game_id", game.id)
-            .gte("checked_at", startOfToday.toISOString())
-            .limit(1)
-            .maybeSingle();
-
-        if (existingPriceCheckError) {
-          throw new Error(existingPriceCheckError.message);
-        }
-
-        if (!existingPriceCheckToday) {
-          const { error: insertPriceCheckError } = await supabaseServer
-            .from("price_checks")
-            .insert({
-              game_id: game.id,
-              price: priceData.currentPrice,
-              original_price: priceData.originalPrice && priceData.originalPrice > 0
-                ? priceData.originalPrice
-                : candidate.itadRegularPrice,
-              discount_percent: priceData.discountPercent,
-              currency: priceData.currency,
-              is_free: priceData.isFree,
-            });
-
-          if (insertPriceCheckError) {
-            throw new Error(insertPriceCheckError.message);
-          }
-        }
+        await saveDailyPriceCheck({
+          gameId: game.id,
+          price: priceData.currentPrice,
+          originalPrice:
+            priceData.originalPrice && priceData.originalPrice > 0
+              ? priceData.originalPrice
+              : candidate.itadRegularPrice,
+          discountPercent: priceData.discountPercent,
+          currency: priceData.currency,
+          isFree: priceData.isFree,
+        });
 
         savedFreeGameCount += 1;
 
