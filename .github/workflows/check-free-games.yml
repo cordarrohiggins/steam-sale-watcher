@@ -3,7 +3,6 @@ name: Check Free Games
 on:
   schedule:
     - cron: "55 0 * * *"
-    - cron: "55 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,14 +12,5 @@ jobs:
     steps:
       - name: Call free games checker endpoint
         run: |
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            CURRENT_EASTERN_TIME=$(TZ=America/New_York date +%H:%M)
-
-            if [ "$CURRENT_EASTERN_TIME" != "20:55" ]; then
-              echo "Skipping because it is $CURRENT_EASTERN_TIME Eastern, not 20:55 Eastern."
-              exit 0
-            fi
-          fi
-
           curl --fail -X GET "${{ secrets.APP_URL }}/api/jobs/check-free-games" \
             -H "Authorization: Bearer ${{ secrets.CHECK_PRICES_SECRET }}"

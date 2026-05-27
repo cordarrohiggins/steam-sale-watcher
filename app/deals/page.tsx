@@ -82,7 +82,9 @@ export default function DealsPage() {
       setErrorMessage("");
 
       try {
-        const response = await fetch("/api/deals");
+        const response = await fetch("/api/deals", {
+          cache: "no-store",
+        });
         const data = await response.json();
 
         if (!response.ok) {

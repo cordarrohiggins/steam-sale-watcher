@@ -3,8 +3,6 @@ name: Check Steam Prices
 on:
   schedule:
     - cron: "15 */2 * * *"
-    - cron: "45 0 * * *"
-    - cron: "45 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -14,18 +12,5 @@ jobs:
     steps:
       - name: Call price checker endpoint
         run: |
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            CURRENT_MINUTE=$(date -u +%M)
-
-            if [ "$CURRENT_MINUTE" = "45" ]; then
-              CURRENT_EASTERN_TIME=$(TZ=America/New_York date +%H:%M)
-
-              if [ "$CURRENT_EASTERN_TIME" != "20:45" ]; then
-                echo "Skipping extra daily-history run because it is $CURRENT_EASTERN_TIME Eastern, not 20:45 Eastern."
-                exit 0
-              fi
-            fi
-          fi
-
           curl --fail -X GET "${{ secrets.APP_URL }}/api/jobs/check-prices" \
             -H "Authorization: Bearer ${{ secrets.CHECK_PRICES_SECRET }}"
