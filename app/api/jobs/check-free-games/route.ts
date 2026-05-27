@@ -196,6 +196,13 @@ export async function GET(request: Request) {
     let savedFreeGameCount = 0;
     let emailCount = 0;
 
+    const updatedFreeGames: Array<{
+      name: string;
+      steamAppId: number;
+      freeToKeepGameId: string;
+      lastConfirmedFreeAt: string;
+    }> = [];
+
     const newFreeGames: FreeGameEmailItem[] = [];
 
     const activeSteamAppIds = new Set<number>();
@@ -277,6 +284,13 @@ export async function GET(request: Request) {
         if (freeGameError) {
           throw new Error(freeGameError.message);
         }
+
+        updatedFreeGames.push({
+          name: priceData.name,
+          steamAppId: priceData.steamAppId,
+          freeToKeepGameId: freeGame.id,
+          lastConfirmedFreeAt: new Date().toISOString(),
+        });
 
         const startOfToday = new Date();
         startOfToday.setUTCHours(0, 0, 0, 0);
@@ -434,6 +448,7 @@ export async function GET(request: Request) {
       verifiedFreeCount,
       savedFreeGameCount,
       emailCount,
+      updatedFreeGames,
     });
   } catch (error) {
     return NextResponse.json(

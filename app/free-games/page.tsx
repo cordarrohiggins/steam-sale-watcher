@@ -39,7 +39,9 @@ export default function FreeGamesPage() {
       setErrorMessage("");
 
       try {
-        const response = await fetch("/api/free-games");
+        const response = await fetch("/api/free-games", {
+          cache: "no-store",
+        });
         const data = await response.json();
 
         if (!response.ok) {
