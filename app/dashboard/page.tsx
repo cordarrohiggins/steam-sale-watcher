@@ -108,14 +108,6 @@ export default function DashboardPage() {
     async function getSession() {
       const { data } = await supabase.auth.getSession();
 
-      if (
-        data.session &&
-        sessionStorage.getItem("password_reset_required") === "true"
-      ) {
-        window.location.href = "/reset-password";
-        return;
-      }
-
       setUserEmail(data.session?.user.email ?? null);
       setUserId(data.session?.user.id ?? null);
       if (data.session?.user.id) {

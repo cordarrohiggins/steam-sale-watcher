@@ -29,7 +29,7 @@ export default function ResetPasswordPage() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
         (event, session) => {
             if (event === "PASSWORD_RECOVERY") {
-                sessionStorage.setItem("password_reset_required", "true");
+                localStorage.setItem("password_reset_required", "true");
             }
 
             setHasSession(Boolean(session));
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
         throw error;
       }
 
-      sessionStorage.removeItem("password_reset_required");
+      localStorage.removeItem("password_reset_required");
       setNewPassword("");
       setConfirmPassword("");
       setStatusMessage("Password updated. You can now go to your dashboard.");
@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
   }
 
   async function handleCancelReset() {
-    sessionStorage.removeItem("password_reset_required");
+    localStorage.removeItem("password_reset_required");
     await supabase.auth.signOut();
     window.location.href = "/login";
   }

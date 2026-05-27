@@ -65,13 +65,6 @@ export default function SettingsPage() {
       setErrorMessage("");
 
       const { data } = await supabase.auth.getSession();
-      if (
-        data.session &&
-        sessionStorage.getItem("password_reset_required") === "true"
-      ) {
-        window.location.href = "/reset-password";
-        return;
-      }
       const sessionUser = data.session?.user;
 
       if (!sessionUser) {
