@@ -12,12 +12,19 @@ type WatchedGameRow = {
   };
 };
 
+type FailedGame = {
+  steamAppId: number;
+  error: string;
+};
+
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get("authorization");
     const expectedSecret = process.env.CHECK_PRICES_SECRET;
 
     if (!expectedSecret) {
+      console.error("CHECK_PRICES_SECRET is missing.");
+
       return NextResponse.json(
         { error: "Missing CHECK_PRICES_SECRET" },
         { status: 500 }
@@ -43,6 +50,11 @@ export async function GET(request: Request) {
         .eq("alert_enabled", true);
 
     if (watchedGamesError) {
+      console.error(
+        "Failed to load watchlist items:",
+        watchedGamesError
+      );
+
       return NextResponse.json(
         { error: watchedGamesError.message },
         { status: 500 }
@@ -58,180 +70,243 @@ export async function GET(request: Request) {
     }
 
     const results = [];
+    const failedGames: FailedGame[] = [];
     let triggeredAlertCount = 0;
 
     for (const game of uniqueGames.values()) {
-      const priceData = await fetchSteamPrice(game.steam_app_id);
+      try {
+        console.log(`Checking Steam app ${game.steam_app_id}`);
 
-      const { error: updateGameError } = await supabaseServer
-        .from("games")
-        .update({
-          name: priceData.name,
-          header_image: priceData.headerImage,
-          store_url: priceData.storeUrl,
-          current_price: priceData.currentPrice,
-          original_price: priceData.originalPrice,
-          discount_percent: priceData.discountPercent,
+        const priceData = await fetchSteamPrice(game.steam_app_id);
+
+        console.log(
+          `Fetched Steam app ${game.steam_app_id}: ${priceData.name}`
+        );
+
+        const { error: updateGameError } = await supabaseServer
+          .from("games")
+          .update({
+            name: priceData.name,
+            header_image: priceData.headerImage,
+            store_url: priceData.storeUrl,
+            current_price: priceData.currentPrice,
+            original_price: priceData.originalPrice,
+            discount_percent: priceData.discountPercent,
+            currency: priceData.currency,
+            is_free: priceData.isFree,
+            sale_ends_at: priceData.saleEndsAt,
+            last_checked_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", game.id);
+
+        if (updateGameError) {
+          throw new Error(
+            `Failed to update game ${game.id}: ${updateGameError.message}`
+          );
+        }
+
+        await saveDailyPriceCheck({
+          gameId: game.id,
+          price: priceData.currentPrice,
+          originalPrice: priceData.originalPrice,
+          discountPercent: priceData.discountPercent,
           currency: priceData.currency,
-          is_free: priceData.isFree,
-          sale_ends_at: priceData.saleEndsAt,
-          last_checked_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", game.id);
+          isFree: priceData.isFree,
+        });
 
-      if (updateGameError) {
-        throw new Error(updateGameError.message);
-      }
+        const { data: watchlistRules, error: watchlistRulesError } =
+          await supabaseServer
+            .from("watchlist_items")
+            .select(
+              "id, user_id, target_price, target_discount_percent, alert_type, alert_triggered"
+            )
+            .eq("game_id", game.id)
+            .eq("alert_enabled", true);
 
-      await saveDailyPriceCheck({
-        gameId: game.id,
-        price: priceData.currentPrice,
-        originalPrice: priceData.originalPrice,
-        discountPercent: priceData.discountPercent,
-        currency: priceData.currency,
-        isFree: priceData.isFree,
-      });
-
-      const { data: watchlistRules, error: watchlistRulesError } =
-        await supabaseServer
-          .from("watchlist_items")
-          .select(
-            "id, user_id, target_price, target_discount_percent, alert_type, alert_triggered"
-          )
-          .eq("game_id", game.id)
-          .eq("alert_enabled", true);
-
-      if (watchlistRulesError) {
-        throw new Error(watchlistRulesError.message);
-      }
-
-      for (const rule of watchlistRules ?? []) {
-        if (priceData.currentPrice === null) {
-          continue;
+        if (watchlistRulesError) {
+          throw new Error(
+            `Failed to load alert rules for game ${game.id}: ${watchlistRulesError.message}`
+          );
         }
 
-        const targetPrice = Number(rule.target_price);
-        const targetDiscountPercent = Number(rule.target_discount_percent);
-
-        const isPriceAlertMet =
-          rule.alert_type === "target_price" &&
-          priceData.currentPrice <= targetPrice;
-
-        const isDiscountAlertMet =
-          rule.alert_type === "target_discount" &&
-          priceData.discountPercent >= targetDiscountPercent;
-
-        const isAlertMet = isPriceAlertMet || isDiscountAlertMet;
-
-        if (isAlertMet && !rule.alert_triggered) {
-          const { data: userSettings, error: userSettingsError } = await supabaseServer
-            .from("user_settings")
-            .select("email_alert_frequency")
-            .eq("user_id", rule.user_id)
-            .maybeSingle();
-
-          if (userSettingsError) {
-            throw new Error(userSettingsError.message);
+        for (const rule of watchlistRules ?? []) {
+          if (priceData.currentPrice === null) {
+            continue;
           }
 
-          const emailAlertFrequency =
-            userSettings?.email_alert_frequency ?? "immediate";
+          const targetPrice = Number(rule.target_price);
+          const targetDiscountPercent = Number(
+            rule.target_discount_percent
+          );
 
-          if (emailAlertFrequency === "immediate") {
-            const { data: userData, error: userError } =
-              await supabaseServer.auth.admin.getUserById(rule.user_id);
+          const isPriceAlertMet =
+            rule.alert_type === "target_price" &&
+            priceData.currentPrice <= targetPrice;
 
-            if (userError) {
-              throw new Error(userError.message);
+          const isDiscountAlertMet =
+            rule.alert_type === "target_discount" &&
+            priceData.discountPercent >= targetDiscountPercent;
+
+          const isAlertMet =
+            isPriceAlertMet || isDiscountAlertMet;
+
+          if (isAlertMet && !rule.alert_triggered) {
+            const {
+              data: userSettings,
+              error: userSettingsError,
+            } = await supabaseServer
+              .from("user_settings")
+              .select("email_alert_frequency")
+              .eq("user_id", rule.user_id)
+              .maybeSingle();
+
+            if (userSettingsError) {
+              throw new Error(
+                `Failed to load user settings: ${userSettingsError.message}`
+              );
             }
 
-            const userEmail = userData.user?.email;
+            const emailAlertFrequency =
+              userSettings?.email_alert_frequency ?? "immediate";
 
-            if (!userEmail) {
-              throw new Error("Unable to find user email for alert.");
+            if (emailAlertFrequency === "immediate") {
+              const { data: userData, error: userError } =
+                await supabaseServer.auth.admin.getUserById(
+                  rule.user_id
+                );
+
+              if (userError) {
+                throw new Error(
+                  `Failed to load user email: ${userError.message}`
+                );
+              }
+
+              const userEmail = userData.user?.email;
+
+              if (!userEmail) {
+                throw new Error(
+                  "Unable to find user email for alert."
+                );
+              }
+
+              await sendPriceAlertEmail({
+                to: userEmail,
+                gameName: priceData.name,
+                currentPrice: priceData.currentPrice,
+                targetPrice:
+                  rule.alert_type === "target_price"
+                    ? targetPrice
+                    : priceData.currentPrice,
+                storeUrl: priceData.storeUrl,
+              });
             }
 
-            await sendPriceAlertEmail({
-              to: userEmail,
-              gameName: priceData.name,
-              currentPrice: priceData.currentPrice,
-              targetPrice:
-                rule.alert_type === "target_price"
-                  ? targetPrice
-                  : priceData.currentPrice,
-              storeUrl: priceData.storeUrl,
-            });
+            const { error: insertAlertError } =
+              await supabaseServer
+                .from("alerts_sent")
+                .insert({
+                  user_id: rule.user_id,
+                  game_id: game.id,
+                  watchlist_item_id: rule.id,
+                  price_at_alert: priceData.currentPrice,
+                  discount_at_alert:
+                    priceData.discountPercent,
+                  alert_type: rule.alert_type,
+                  email_delivery_type:
+                    emailAlertFrequency,
+                });
+
+            if (insertAlertError) {
+              throw new Error(
+                `Failed to record alert: ${insertAlertError.message}`
+              );
+            }
+
+            const { error: updateAlertError } =
+              await supabaseServer
+                .from("watchlist_items")
+                .update({
+                  alert_triggered: true,
+                  last_alert_sent_at:
+                    new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", rule.id);
+
+            if (updateAlertError) {
+              throw new Error(
+                `Failed to update alert state: ${updateAlertError.message}`
+              );
+            }
+
+            triggeredAlertCount += 1;
           }
-          const { error: insertAlertError } = await supabaseServer
-            .from("alerts_sent")
-            .insert({
-              user_id: rule.user_id,
-              game_id: game.id,
-              watchlist_item_id: rule.id,
-              price_at_alert: priceData.currentPrice,
-              discount_at_alert: priceData.discountPercent,
-              alert_type: rule.alert_type,
-              email_delivery_type: emailAlertFrequency,
-            });
 
-          if (insertAlertError) {
-            throw new Error(insertAlertError.message);
+          if (!isAlertMet && rule.alert_triggered) {
+            const { error: resetAlertError } =
+              await supabaseServer
+                .from("watchlist_items")
+                .update({
+                  alert_triggered: false,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", rule.id);
+
+            if (resetAlertError) {
+              throw new Error(
+                `Failed to reset alert state: ${resetAlertError.message}`
+              );
+            }
           }
-
-          const { error: updateAlertError } = await supabaseServer
-            .from("watchlist_items")
-            .update({
-              alert_triggered: true,
-              last_alert_sent_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", rule.id);
-
-          if (updateAlertError) {
-            throw new Error(updateAlertError.message);
-          }
-
-          triggeredAlertCount += 1;
         }
 
-        if (!isAlertMet && rule.alert_triggered) {
-          const { error: resetAlertError } = await supabaseServer
-            .from("watchlist_items")
-            .update({
-              alert_triggered: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", rule.id);
+        results.push({
+          steamAppId: priceData.steamAppId,
+          name: priceData.name,
+          currentPrice: priceData.currentPrice,
+          originalPrice: priceData.originalPrice,
+          discountPercent: priceData.discountPercent,
+          currency: priceData.currency,
+          saleEndsAt: priceData.saleEndsAt,
+          isFree: priceData.isFree,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : String(error);
 
-          if (resetAlertError) {
-            throw new Error(resetAlertError.message);
-          }
-        }
+        console.error(
+          `Failed while processing Steam app ${game.steam_app_id}:`,
+          error
+        );
+
+        failedGames.push({
+          steamAppId: game.steam_app_id,
+          error: message,
+        });
+
+        continue;
       }
-
-      results.push({
-        steamAppId: priceData.steamAppId,
-        name: priceData.name,
-        currentPrice: priceData.currentPrice,
-        originalPrice: priceData.originalPrice,
-        discountPercent: priceData.discountPercent,
-        currency: priceData.currency,
-        saleEndsAt: priceData.saleEndsAt,
-        isFree: priceData.isFree,
-      });
     }
 
     return NextResponse.json({
       checkedGameCount: results.length,
+      failedGameCount: failedGames.length,
       triggeredAlertCount,
+      failedGames,
       results,
     });
   } catch (error) {
+    console.error("CHECK PRICES JOB FAILED:", error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Unable to check prices",
+          error instanceof Error
+            ? error.message
+            : "Unable to check prices",
       },
       { status: 500 }
     );
