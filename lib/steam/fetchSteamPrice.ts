@@ -71,25 +71,44 @@ export async function fetchSteamPrice(
     `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=${countryCode}&l=english`,
     {
       cache: "no-store",
+      headers: {
+        "User-Agent": "steam-sale-watcher/1.0",
+      },
     }
   );
 
   if (!response.ok) {
     throw new Error(
-      `Failed to fetch Steam price. Status: ${response.status} ${response.statusText}`
+      `Steam request failed for app ${steamAppId}. Status: ${response.status} ${response.statusText}`
     );
   }
 
-  const data = (await response.json()) as SteamAppDetailsResponse;
+  let data: SteamAppDetailsResponse;
+
+  try {
+    data = (await response.json()) as SteamAppDetailsResponse;
+  } catch {
+    throw new Error(
+      `Steam returned invalid JSON for app ${steamAppId}.`
+    );
+  }
+
   const appData = data[String(steamAppId)];
 
-  if (!appData?.success || !appData.data) {
-    throw new Error("Steam returned no game data for this app ID.");
+  if (!appData) {
+    throw new Error(
+      `Steam returned no response entry for app ${steamAppId}.`
+    );
+  }
+
+  if (!appData.success || !appData.data) {
+    throw new Error(
+      `Steam returned no game data for app ${steamAppId}. The app may be removed, unavailable, region-restricted, or invalid.`
+    );
   }
 
   const game = appData.data;
   const priceOverview = game.price_overview;
-
   const isFree = game.is_free ?? false;
 
   return {
@@ -97,7 +116,11 @@ export async function fetchSteamPrice(
     name: game.name ?? `Steam App ${steamAppId}`,
     headerImage: game.header_image ?? null,
     storeUrl: `https://store.steampowered.com/app/${steamAppId}`,
-    currentPrice: isFree ? 0 : priceOverview ? priceOverview.final / 100 : null,
+    currentPrice: isFree
+      ? 0
+      : priceOverview
+        ? priceOverview.final / 100
+        : null,
     originalPrice: isFree
       ? 0
       : priceOverview
