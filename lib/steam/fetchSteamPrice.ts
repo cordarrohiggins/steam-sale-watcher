@@ -2,6 +2,7 @@ type SteamAppDetailsResponse = {
   [appId: string]: {
     success: boolean;
     data?: {
+      steam_appid?: number;
       name?: string;
       header_image?: string;
       is_free?: boolean;
@@ -120,7 +121,29 @@ export async function fetchSteamPrice(
         );
       }
 
-      const appData = data[String(steamAppId)];
+      // Steam normally returns the requested app under its app ID key.
+      // Occasionally the top-level key can be incorrect, even though the
+      // returned game's internal steam_appid is correct.
+      let appData = data[String(steamAppId)];
+
+      if (
+        !appData?.data ||
+        appData.data.steam_appid !== steamAppId
+      ) {
+        const matchingEntry = Object.values(data).find(
+          (entry) =>
+            entry.success &&
+            entry.data?.steam_appid === steamAppId
+        );
+
+        if (matchingEntry) {
+          console.warn(
+            `Steam returned app ${steamAppId} under an unexpected response key. Using matching steam_appid instead.`
+          );
+
+          appData = matchingEntry;
+        }
+      }
 
       if (!appData) {
         throw new Error(
@@ -131,6 +154,15 @@ export async function fetchSteamPrice(
       if (!appData.success || !appData.data) {
         throw new Error(
           `Steam returned no game data for app ${steamAppId}.`
+        );
+      }
+
+      if (
+        appData.data.steam_appid !== undefined &&
+        appData.data.steam_appid !== steamAppId
+      ) {
+        throw new Error(
+          `Steam returned mismatched game data for app ${steamAppId}. Returned steam_appid: ${appData.data.steam_appid}.`
         );
       }
 
