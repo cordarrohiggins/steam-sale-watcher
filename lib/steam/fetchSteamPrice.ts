@@ -45,14 +45,18 @@ function getSaleEndsAt(
   }[]
 ) {
   if (priceOverview?.discount_expiration) {
-    return new Date(priceOverview.discount_expiration * 1000).toISOString();
+    return new Date(
+      priceOverview.discount_expiration * 1000
+    ).toISOString();
   }
 
   const packageExpirationDates =
     packageGroups
       ?.flatMap((group) => group.subs ?? [])
       .map((sub) => sub.discount_expiration)
-      .filter((expiration): expiration is number => Boolean(expiration)) ?? [];
+      .filter(
+        (expiration): expiration is number => Boolean(expiration)
+      ) ?? [];
 
   if (packageExpirationDates.length === 0) {
     return null;
@@ -60,75 +64,128 @@ function getSaleEndsAt(
 
   const soonestExpiration = Math.min(...packageExpirationDates);
 
-  return new Date(soonestExpiration * 1000).toISOString();
+  return new Date(
+    soonestExpiration * 1000
+  ).toISOString();
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function fetchSteamPrice(
   steamAppId: number,
   countryCode = "us"
 ): Promise<SteamPriceData> {
-  const response = await fetch(
-    `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=${countryCode}&l=english`,
-    {
-      cache: "no-store",
-      headers: {
-        "User-Agent": "steam-sale-watcher/1.0",
-      },
+  const maxAttempts = 3;
+
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      if (attempt > 1) {
+        const delayMs = (attempt - 1) * 1000;
+
+        console.log(
+          `Retrying Steam app ${steamAppId} in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`
+        );
+
+        await sleep(delayMs);
+      }
+
+      const response = await fetch(
+        `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=${countryCode}&l=english`,
+        {
+          cache: "no-store",
+          headers: {
+            "User-Agent": "steam-sale-watcher/1.0",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Steam request failed for app ${steamAppId}. Status: ${response.status} ${response.statusText}`
+        );
+      }
+
+      let data: SteamAppDetailsResponse;
+
+      try {
+        data =
+          (await response.json()) as SteamAppDetailsResponse;
+      } catch {
+        throw new Error(
+          `Steam returned invalid JSON for app ${steamAppId}.`
+        );
+      }
+
+      const appData = data[String(steamAppId)];
+
+      if (!appData) {
+        throw new Error(
+          `Steam returned no response entry for app ${steamAppId}.`
+        );
+      }
+
+      if (!appData.success || !appData.data) {
+        throw new Error(
+          `Steam returned no game data for app ${steamAppId}.`
+        );
+      }
+
+      const game = appData.data;
+      const priceOverview = game.price_overview;
+      const isFree = game.is_free ?? false;
+
+      return {
+        steamAppId,
+        name:
+          game.name ?? `Steam App ${steamAppId}`,
+        headerImage:
+          game.header_image ?? null,
+        storeUrl:
+          `https://store.steampowered.com/app/${steamAppId}`,
+        currentPrice: isFree
+          ? 0
+          : priceOverview
+            ? priceOverview.final / 100
+            : null,
+        originalPrice: isFree
+          ? 0
+          : priceOverview
+            ? priceOverview.initial / 100
+            : null,
+        discountPercent:
+          priceOverview?.discount_percent ?? 0,
+        currency:
+          priceOverview?.currency ?? "USD",
+        saleEndsAt: getSaleEndsAt(
+          priceOverview,
+          game.package_groups
+        ),
+        isFree,
+      };
+    } catch (error) {
+      lastError = error;
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      console.warn(
+        `Steam app ${steamAppId} failed on attempt ${attempt}/${maxAttempts}: ${message}`
+      );
     }
+  }
+
+  const lastMessage =
+    lastError instanceof Error
+      ? lastError.message
+      : String(lastError);
+
+  throw new Error(
+    `Steam app ${steamAppId} failed after ${maxAttempts} attempts. Last error: ${lastMessage}`
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Steam request failed for app ${steamAppId}. Status: ${response.status} ${response.statusText}`
-    );
-  }
-
-  let data: SteamAppDetailsResponse;
-
-  try {
-    data = (await response.json()) as SteamAppDetailsResponse;
-  } catch {
-    throw new Error(
-      `Steam returned invalid JSON for app ${steamAppId}.`
-    );
-  }
-
-  const appData = data[String(steamAppId)];
-
-  if (!appData) {
-    throw new Error(
-      `Steam returned no response entry for app ${steamAppId}.`
-    );
-  }
-
-  if (!appData.success || !appData.data) {
-    throw new Error(
-      `Steam returned no game data for app ${steamAppId}. The app may be removed, unavailable, region-restricted, or invalid.`
-    );
-  }
-
-  const game = appData.data;
-  const priceOverview = game.price_overview;
-  const isFree = game.is_free ?? false;
-
-  return {
-    steamAppId,
-    name: game.name ?? `Steam App ${steamAppId}`,
-    headerImage: game.header_image ?? null,
-    storeUrl: `https://store.steampowered.com/app/${steamAppId}`,
-    currentPrice: isFree
-      ? 0
-      : priceOverview
-        ? priceOverview.final / 100
-        : null,
-    originalPrice: isFree
-      ? 0
-      : priceOverview
-        ? priceOverview.initial / 100
-        : null,
-    discountPercent: priceOverview?.discount_percent ?? 0,
-    currency: priceOverview?.currency ?? "USD",
-    saleEndsAt: getSaleEndsAt(priceOverview, game.package_groups),
-    isFree,
-  };
 }
